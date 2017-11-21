@@ -2,4 +2,4 @@
 
 This was my first development from zero.
 
-Simple code without include, all in a program.
+Simple code without includes, all in a program.
