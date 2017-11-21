@@ -1,5 +1,5 @@
 # ALV-basic-code
 
-This was my first developement from zero.
+This was my first development from zero.
 
-Simple code without include all in a program.
+Simple code without include, all in a program.
