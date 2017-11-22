@@ -12,23 +12,20 @@ DATA: gv_fecha     LIKE sy-datum,
       gv_acree     LIKE reguh-lifnr,
       gv_refer(20) TYPE c.
 
-*///////////////////////////////      S
+*///////////////////////////////      Entry-Screen
 SELECTION-SCREEN BEGIN OF BLOCK block_1 WITH FRAME TITLE text-001.
-PARAMETERS: p_bukrs LIKE bsak-bukrs OBLIGATORY.
-SELECT-OPTIONS: s_lifnr FOR bsak-lifnr.
-SELECT-OPTIONS: s_budat FOR bsak-budat.
-PARAMETERS: p_gjahr LIKE bsak-gjahr OBLIGATORY.
+       PARAMETERS: p_bukrs LIKE bsak-bukrs OBLIGATORY.
+       SELECT-OPTIONS: s_lifnr FOR bsak-lifnr.
+       SELECT-OPTIONS: s_budat FOR bsak-budat.
+       PARAMETERS: p_gjahr LIKE bsak-gjahr OBLIGATORY.
 SELECTION-SCREEN END OF BLOCK block_1.
 
-*&---------------------------------------------------------------------*
-*                                      ESTRUCTURAS
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Structures
 TYPES: BEGIN OF st_bsak,
-       bukrs LIKE bsak-bukrs,         "nombre
-       lifnr LIKE bsak-lifnr,         "nombre
-       gjahr LIKE bsak-gjahr,         "nombre
-       xzahl LIKE bsak-xzahl,         "Campo implícito
+       bukrs LIKE bsak-bukrs,
+       lifnr LIKE bsak-lifnr,
+       gjahr LIKE bsak-gjahr,
+       xzahl LIKE bsak-xzahl,
        belnr LIKE bsak-belnr,
        budat LIKE bsak-budat,
        dmbtr LIKE bsak-dmbtr,
@@ -62,7 +59,7 @@ TYPES: BEGIN OF st_lfbk,
 
 TYPES: BEGIN OF st_adrc,
        addrnumber LIKE adrc-addrnumber,
-       city1 LIKE adrc-city1,
+            city1 LIKE adrc-city1,
        END OF st_adrc.
 
 TYPES: BEGIN OF st_bnka,
@@ -70,7 +67,6 @@ TYPES: BEGIN OF st_bnka,
        bankl LIKE bnka-bankl,
        banka LIKE bnka-banka,
        END OF st_bnka.
-
 
 TYPES: BEGIN OF st_alv,
        laufd LIKE reguh-laufd,
@@ -86,10 +82,7 @@ TYPES: BEGIN OF st_alv,
        bvtyp LIKE lfbk-bvtyp,
        END OF st_alv.
 
-*&---------------------------------------------------------------------*
-*                                      TABLAS INTERNAS
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Internal Tables
 DATA: ti_bsak  TYPE TABLE OF st_bsak.
 DATA: ti_bsik  TYPE TABLE OF st_bsak.
 DATA: ti_reguh TYPE TABLE OF st_reguh.
@@ -99,10 +92,7 @@ DATA: ti_adrc  TYPE TABLE OF st_adrc.
 DATA: ti_bnka  TYPE TABLE OF st_bnka.
 DATA: ti_alv   TYPE TABLE OF st_alv.
 
-*&---------------------------------------------------------------------*
-*                                      FIELD SYMBOLS
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Field Symbols
 FIELD-SYMBOLS: <fs_bsak>  TYPE st_bsak,
                <fs_bsik>  TYPE st_bsak,
                <fs_reguh> TYPE st_reguh,
@@ -112,12 +102,8 @@ FIELD-SYMBOLS: <fs_bsak>  TYPE st_bsak,
                <fs_bnka>  TYPE st_bnka,
                <fs_alv>   TYPE st_alv.
 
-*&---------------------------------------------------------------------*
-*                                      CONSULTAS (F01)
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Queries F01
 START-OF-SELECTION.
-
 *fecha
   SELECT bukrs lifnr gjahr xzahl belnr budat dmbtr
          FROM bsak
