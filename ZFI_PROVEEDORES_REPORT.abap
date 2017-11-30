@@ -104,7 +104,6 @@ FIELD-SYMBOLS: <fs_bsak>  TYPE st_bsak,
 
 *///////////////////////////////      Queries F01
 START-OF-SELECTION.
-*fecha
   SELECT bukrs lifnr gjahr xzahl belnr budat dmbtr
          FROM bsak
          INTO TABLE ti_bsak
@@ -126,71 +125,41 @@ START-OF-SELECTION.
          AND xzahl = 'X'.
 *APPEND ti_bsak.
 
-
-  SELECT zbukr
-         vblnr
-         zaldt
-         laufd
-         lifnr
-         waers                              "consulta moneda de pago
+  SELECT zbukr vblnr zaldt laufd lifnr waers
          FROM reguh
          INTO TABLE ti_reguh
          FOR ALL ENTRIES IN ti_bsak
          WHERE vblnr = ti_bsak-belnr
          AND   zbukr = ti_bsak-bukrs
-         AND   zaldt = ti_bsak-budat.
-*_________________________________________________
+         AND   zaldt = ti_bsak-budat.                       
 
-*NIT
-  SELECT lifnr
-         stcd1
-         adrnr              "consulta cuidad
+  SELECT lifnr stcd1 adrnr             
          FROM lfa1
          INTO TABLE ti_lfa1
          FOR ALL ENTRIES IN ti_bsak
          WHERE lifnr EQ ti_bsak-lifnr.
-*_________________________________________________
 
-*BENEFICIARIO
-  SELECT lifnr
-         koinh
-         bankn
-         bankl
-         banks
-         bkont
-         bvtyp
+  SELECT lifnr koinh bankn bankl banks bkont bvtyp
          FROM lfbk
          INTO TABLE ti_lfbk
          FOR ALL ENTRIES IN ti_bsak
          WHERE lifnr EQ ti_bsak-lifnr.
-*_________________________________________________
 
-*CUIDAD
-  SELECT addrnumber
-         city1
+  SELECT addrnumber city1
          FROM adrc
          INTO TABLE ti_adrc
          FOR ALL ENTRIES IN ti_lfa1
          WHERE addrnumber EQ ti_lfa1-adrnr.
-*_________________________________________________
-
-*Cuenta beneficiario
+         
   SELECT banks bankl banka
          FROM bnka
          INTO TABLE ti_bnka
          FOR ALL ENTRIES IN ti_lfbk
          WHERE bankl EQ ti_lfbk-bankl
          AND banks EQ ti_lfbk-banks.
-*_________________________________________________
 
-
-*&---------------------------------------------------------------------*
-*                                     OPERACIONES CON TABLAS
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Loops & Read Tables
   LOOP AT ti_reguh ASSIGNING <fs_reguh>.
-*
-*  ENDLOOP.
 
     READ TABLE ti_bsak ASSIGNING <fs_bsak> WITH KEY bukrs = <fs_reguh>-zbukr belnr = <fs_reguh>-vblnr budat = <fs_reguh>-zaldt lifnr = <fs_reguh>-lifnr.
     IF sy-subrc = 0.
@@ -202,9 +171,7 @@ START-OF-SELECTION.
           output = <fs_reguh>-lifnr.
 
       gv_fecha = <fs_reguh>-laufd.
-
       CONCATENATE <fs_reguh>-lifnr <fs_reguh>-laufd INTO gv_refer.
-
       <fs_reguh>-bkref = gv_refer.
 
       APPEND INITIAL LINE TO ti_alv ASSIGNING <fs_alv>.
@@ -238,125 +205,43 @@ START-OF-SELECTION.
 
     ENDIF.
 
-
-*    APPEND INITIAL LINE TO ti_alv ASSIGNING <fs_alv>.
-
-*    READ TABLE ti_reguh ASSIGNING <fs_reguh> WITH KEY ZBUKR = <fs_reguh>-ZBUKR vblnr = <fs_reguh>-vblnr zaldt = <fs_reguh>-zaldt.
-*      IF sy-subrc = 0.
-*    <fs_alv>-laufd = <fs_reguh>-laufd.
-*      ENDIF.
-*
-*    READ TABLE ti_reguh ASSIGNING <fs_reguh> WITH KEY laufd = <fs_reguh>-laufd lifnr = <fs_reguh>-lifnr.
-*      IF sy-subrc = 0.
-*    <fs_alv>-bkref = <fs_reguh>-bkref.
-*      ENDIF.
-
-
-*    READ TABLE ti_lfa1 ASSIGNING <fs_lfa1> WITH KEY lifnr = <fs_bsak>-lifnr.
-*      IF sy-subrc = 0.
-*        <fs_alv>-stcd1 = <fs_lfa1>-stcd1.
-*      ENDIF.
-
-*    READ TABLE ti_bsak ASSIGNING <fs_bsak> WITH KEY bukrs = <fs_reguh>-zbukr belnr = <fs_reguh>-vblnr budat = <fs_reguh>-zaldt.
-*    IF sy-subrc = 0.
-*      <fs_alv>-dmbtr = <fs_bsak>-dmbtr.
-*    ENDIF.
-
-*    READ TABLE ti_lfbk ASSIGNING <fs_lfbk> WITH KEY lifnr = <fs_bsak>-lifnr.
-*    IF sy-subrc = 0.
-*      <fs_alv>-bankn = <fs_lfbk>-bankn.
-*    ENDIF.
-
-*    READ TABLE ti_lfbk ASSIGNING <fs_lfbk> WITH KEY lifnr = <fs_lfbk>-lifnr.
-*    IF sy-subrc = 0.
-*      <fs_alv>-koinh = <fs_lfbk>-koinh.
-*    ENDIF.
-
-*    READ TABLE ti_adrc ASSIGNING <fs_adrc> WITH KEY addrnumber = <fs_adrc>-addrnumber.
-*    IF sy-subrc = 0.
-*      <fs_alv>-city1 = <fs_adrc>-city1.
-*    ENDIF.
-
-
-
-*    READ TABLE ti_bnka ASSIGNING <fs_bnka> WITH KEY banks = <fs_bnka>-banks bankl = <fs_bnka>-bankl.
-*    IF sy-subrc = 0.
-*      <fs_alv>-banka = <fs_bnka>-banka.
-*    ENDIF.
-
-*    READ TABLE ti_lfbk ASSIGNING <fs_lfbk> WITH KEY lifnr = <fs_lfbk>-lifnr.
-*    IF sy-subrc = 0.
-*      <fs_alv>-bkont = <fs_lfbk>-bkont.
-*    ENDIF.
-
-*    READ TABLE ti_reguh ASSIGNING <fs_reguh> WITH KEY zbukr = <fs_reguh>-zbukr lifnr = <fs_reguh>-lifnr vblnr = <fs_reguh>-vblnr.
-*    IF sy-subrc = 0.
-*      <fs_alv>-waers = <fs_reguh>-waers.
-*    ENDIF.
-
-*    READ TABLE ti_lfbk ASSIGNING <fs_lfbk> WITH KEY lifnr = <fs_lfbk>-lifnr.
-*    IF sy-subrc = 0.
-*      <fs_alv>-bvtyp = <fs_lfbk>-bvtyp.
-*    ENDIF.
-
-
-
-
-
   ENDLOOP.
-
-*&---------------------------------------------------------------------*
-*                                     ALV
-*&---------------------------------------------------------------------*
-
 END-OF-SELECTION.
 
+*///////////////////////////////      ALV
   IF ti_alv[] IS NOT INITIAL.
     SORT ti_alv DESCENDING BY KOINH.
-    PERFORM alv_report USING ti_alv[].      "LLamado al alv
+    PERFORM alv_report USING ti_alv[].      "LLamado al ALV
 
   ELSE.
-    MESSAGE i162(00) WITH 'No Existen Datos para su Selección'.
+    MESSAGE i162(00) WITH 'No existen datos para su selección'.
     STOP.
   ENDIF.
 
   TYPE-POOLS: slis.
 
-  DATA: lf_sp_group   TYPE slis_t_sp_group_alv,       "Manejar grupos de campos
-        lf_layout     TYPE slis_layout_alv,           "Manejar diseño de layout
-        it_topheader  TYPE slis_t_listheader,         "Manejar cabecera del rep
-        wa_top        LIKE LINE OF it_topheader.      "Línea para cabecera
+  DATA: lf_sp_group   TYPE slis_t_sp_group_alv,                         "Manejar grupos de campos
+        lf_layout     TYPE slis_layout_alv,                             "Manejar diseño de layout
+        it_topheader  TYPE slis_t_listheader,                           "Manejar cabecera del rep
+        wa_top        LIKE LINE OF it_topheader.                        "Línea para cabecera
 
-*&---------------------------------------------------------------------*
-*        Tablas. Catálogo de campos / manejar catálogo de parámetros
-*&---------------------------------------------------------------------*
-
-  DATA: alv_git_fieldcat TYPE slis_t_fieldcat_alv WITH HEADER LINE.
-
-*&---------------------------------------------------------------------*
-*                           Llamado al ALV
-*&---------------------------------------------------------------------*
+  DATA: alv_git_fieldcat TYPE slis_t_fieldcat_alv WITH HEADER LINE.     "Parametros del catalogo
 
 
 
 
-*&---------------------------------------------------------------------*
-*                          PERFORMS del ALV
-*&---------------------------------------------------------------------*
 
+*///////////////////////////////      ALV PERFORMS
 FORM alv_report  USING  pp_itab LIKE ti_alv[].
 
-  PERFORM sp_group_build USING lf_sp_group[].
-  PERFORM alv_ini_fieldcat.
-  PERFORM layout_build USING lf_layout.
-  PERFORM alv_listado USING pp_itab[].
+  PERFORM sp_group_build USING lf_sp_group[].         "1
+  PERFORM alv_ini_fieldcat.                           "2      
+  PERFORM layout_build USING lf_layout.               "3
+  PERFORM alv_listado USING pp_itab[].                "4
 
-ENDFORM.                    " ALV_REPORT
+ENDFORM.
 
-*&---------------------------------------------------------------------*
-*                 FORM 1 del llamado al ALV
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      ALV PERFORM_1
 FORM sp_group_build USING u_lf_sp_group TYPE slis_t_sp_group_alv.
 
   DATA: ls_sp_group TYPE slis_sp_group_alv.
@@ -365,12 +250,9 @@ FORM sp_group_build USING u_lf_sp_group TYPE slis_t_sp_group_alv.
   ls_sp_group-text     = text-010.
   APPEND ls_sp_group TO u_lf_sp_group.
 
-ENDFORM.                               " SP_GROUP_BUILD3
+ENDFORM. 
 
-*&---------------------------------------------------------------------*
-*                 FORM 2 del llamado al ALV
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      ALV PERFORM_2
 FORM alv_ini_fieldcat.
 
 *Fecha
@@ -489,29 +371,22 @@ FORM alv_ini_fieldcat.
   MODIFY alv_git_fieldcat FROM alv_git_fieldcat
   TRANSPORTING sp_group WHERE fieldname = 'VBTYP'.
 
-ENDFORM.                    " ALV_INI_FIELDCAT
+ENDFORM.
 
-*&---------------------------------------------------------------------*
-*                   FORM 3 del llamado al ALV
-*&---------------------------------------------------------------------*
-
-* FORM LAYOUT_BUILD para diseñar el Layout de salida del ALV
+*///////////////////////////////      ALV PERFORM_3
 FORM layout_build USING    u_lf_layout TYPE slis_layout_alv.
 
 *  u_lf_layout-box_fieldname       = 'CHECK'.  "Checkbox
-  u_lf_layout-zebra               = 'X'.      "Streifenmuster
+   u_lf_layout-zebra               = 'X'.      "Streifenmuster
 *  u_lf_layout-get_selinfos        = 'X'.
 *  u_lf_layout-f2code              = 'BEAN' .  "Doppelklickfunktion
 *  u_lf_layout-confirmation_prompt = 'X'.      "Sicherheitsabfrage
 *  u_lf_layout-key_hotspot         = 'X'.      "Schlüssel als Hotspot
 *  u_lf_layout-info_fieldname      = 'COL'.    "Zeilenfarbe
 
-ENDFORM.                    "LAYOUT_BUILD
+ENDFORM.
 
-*&---------------------------------------------------------------------*
-*                 FORM 4 del llamado al ALV
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      ALV PERFORM_4
 FORM alv_listado  USING ppp_itab LIKE ti_alv[].
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
@@ -529,14 +404,11 @@ FORM alv_listado  USING ppp_itab LIKE ti_alv[].
        TABLES
             t_outtab                 = ppp_itab.
 
-ENDFORM.                    " ALV_LISTADO
+ENDFORM.
 
-*&---------------------------------------------------------------------*
-*                   LLAMADA AL STANDARD
-*&---------------------------------------------------------------------*
-
+*///////////////////////////////      Standard Buttons
 *FORM pf_status USING rt_extab TYPE slis_t_extab.
 *
 *  SET PF-STATUS 'STANDARD'.
 *
-*ENDFORM.                    "pf_status
+*ENDFORM.
