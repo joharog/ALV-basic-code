@@ -227,10 +227,6 @@ END-OF-SELECTION.
 
   DATA: alv_git_fieldcat TYPE slis_t_fieldcat_alv WITH HEADER LINE.     "Parametros del catalogo
 
-
-
-
-
 *///////////////////////////////      ALV PERFORMS
 FORM alv_report  USING  pp_itab LIKE ti_alv[].
 
@@ -364,7 +360,6 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-sp_group    = 'A'.
   alv_git_fieldcat-outputlen   = '20'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
-
 
   CLEAR alv_git_fieldcat.
   alv_git_fieldcat-sp_group = 'A'.
