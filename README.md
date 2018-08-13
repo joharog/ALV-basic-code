@@ -1,3 +1,3 @@
 # ALV-basic-code
 
-Basics development from zero, simple code all in a program.
+Basic development from zero, simple code all in a program.
