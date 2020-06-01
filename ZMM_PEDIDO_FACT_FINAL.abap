@@ -829,7 +829,7 @@ FORM user_command USING lv_okcode LIKE sy-ucomm l_selfield TYPE slis_selfield.
 *         An error was found, no update was done
         ELSE.
           CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'.
-        ENDIF.    .
+        ENDIF.
 
 
 *&----------------------------------------------
