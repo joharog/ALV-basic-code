@@ -1,3 +1,3 @@
 # ALV-basic-code
 
-Basic development of ALV Reports from zero, simple code without includes.
+Basic development of ALV Reports, simple code without includes.
