@@ -25,7 +25,7 @@ DATA: wa_ekbe  TYPE ekbe,
 
 DATA: week_number TYPE scal-week.
 
-DATA: it_alv TYPE TABLE OF zmm_actual_line WITH HEADER LINE,
+DATA: it_alv TYPE TABLE OF zmm_actual_line,
       wa_alv TYPE zmm_actual_line.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME." TITLE text-t01.
@@ -38,7 +38,7 @@ PARAMETERS: p_rad2 TYPE c RADIOBUTTON GROUP rb1.
 SELECTION-SCREEN: END OF BLOCK b1.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b2 WITH FRAME." TITLE text-t01.
-PARAMETERS: p_month TYPE glpca-poper MODIF ID aa.                        "Montly
+SELECT-OPTIONS: s_month FOR glpca-poper MODIF ID aa.                     "Montly
 SELECT-OPTIONS s_weekly FOR glpca-budat MODIF ID bb.                     "Weekly
 SELECTION-SCREEN: END OF BLOCK b2.
 
@@ -51,7 +51,7 @@ AT SELECTION-SCREEN OUTPUT.
         MODIFY SCREEN.
       ENDIF.
     ELSEIF p_rad2 EQ 'X'.
-      CLEAR p_month.
+      CLEAR s_month.
       IF screen-group1 EQ 'AA'.
         screen-active = '0'.
         MODIFY SCREEN.
@@ -61,7 +61,7 @@ AT SELECTION-SCREEN OUTPUT.
 
 START-OF-SELECTION.
 
-  IF p_rad1 EQ 'X' AND p_month IS INITIAL.
+  IF p_rad1 EQ 'X' AND s_month IS INITIAL.
     MESSAGE 'Posting Period must be filled' TYPE 'S' DISPLAY LIKE 'E'.
     STOP.
   ELSEIF p_rad2 EQ 'X' AND s_weekly IS INITIAL..
@@ -69,15 +69,16 @@ START-OF-SELECTION.
     STOP.
   ENDIF.
 
-  IF p_month IS NOT INITIAL.
+  IF s_month IS NOT INITIAL.
 
     SELECT *
      FROM glpca
      INTO TABLE t_glpca
       WHERE rbukrs EQ p_rbukrs
-       AND  poper  EQ p_month
+       AND  poper  IN s_month
        AND  ryear  EQ p_fiscal
-       AND  racct  EQ p_number.
+       AND  racct  EQ p_number
+       AND  bwart IN ( '101', '102' ).
 
   ELSE.
 
@@ -121,11 +122,13 @@ START-OF-SELECTION.
   ENDIF.
 
   REFRESH it_alv.
+  DATA: lv_do TYPE i.
 
   LOOP AT t_glpca INTO wa_glpca.
 
+    wa_alv-client   = sy-mandt.
     wa_alv-refdocnr = wa_glpca-refdocnr. "Ref. Document
-    wa_alv-matnr    = wa_glpca-matnr.    "Material
+    wa_alv-matnr    = sy-index."wa_glpca-matnr.    "Material
     wa_alv-rprctr   = wa_glpca-rprctr.   "Profit Center
     wa_alv-kostl    = wa_glpca-kostl.    "Cost Center
     wa_alv-racct    = wa_glpca-racct.    "Account Number
@@ -182,9 +185,9 @@ START-OF-SELECTION.
         "Implement suitable error handling here
       ENDIF.
 
-      wa_alv-price02 = wa_alv-price01 * wa_alv-ukurs.  "precio PO al tipo de cambio estandar
-      wa_alv-hswae   = wa_ekbe-hswae.                 "LOCAL CURRENCY
-      wa_alv-price03 = wa_ekbe-dmbtr / wa_ekbe-wrbtr. "TIPO DE CAMBIO REAL
+      wa_alv-price02 = wa_alv-price01 * wa_alv-ukurs.  "Precio PO al tipo de cambio estandar
+      wa_alv-hswae   = wa_ekbe-hswae.                  "Local Currency
+      wa_alv-price03 = wa_ekbe-dmbtr / wa_ekbe-wrbtr.  "Tipo de Cambio Real
 
     ENDIF.
 
@@ -227,8 +230,10 @@ START-OF-SELECTION.
     ENDIF.
 
     APPEND wa_alv TO it_alv.
+    CLEAR: wa_alv.
 
   ENDLOOP.
+
 
 *///////////////////////////////      ALV
   IF it_alv[] IS NOT INITIAL.
@@ -240,7 +245,6 @@ START-OF-SELECTION.
 
   ELSE.
     MESSAGE 'No Data Found' TYPE 'S' DISPLAY LIKE 'E'.
-*    MESSAGE i162(00) WITH 'No existen datos para su selección'.
     STOP.
   ENDIF.
 
@@ -279,6 +283,7 @@ ENDFORM.
 *///////////////////////////////      ALV PERFORM_2
 FORM alv_ini_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'REFDOCNR'.
@@ -286,6 +291,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Ref. Document'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'MATNR'.
@@ -293,6 +299,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Materia'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'RPRCTR'.
@@ -300,7 +307,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Profit Center'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
-
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'KOSTL'.
@@ -308,6 +315,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Cost Center'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'RACCT'.
@@ -315,6 +323,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Account Number'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'SGTXT'.
@@ -322,21 +331,23 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Acc.Text'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
-
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
-  alv_git_fieldcat-fieldname    = 'RTCUR'.
+  alv_git_fieldcat-fieldname    = 'RTCUR01'.
   alv_git_fieldcat-reptext_ddic = 'Curr. Key of CoCd Curr.'.
   alv_git_fieldcat-seltext_l    = 'Curr. Key of CoCd Curr.'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
-  alv_git_fieldcat-outputlen    = '15'.
+  CLEAR:alv_git_fieldcat.
+  alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'HSL'.
   alv_git_fieldcat-reptext_ddic = 'In company code currency'.
   alv_git_fieldcat-seltext_l    = 'In company code currency'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '15'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'TSL'.
@@ -344,13 +355,15 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'In transaction currency'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
-  alv_git_fieldcat-fieldname    = 'RTCUR1'.
+  alv_git_fieldcat-fieldname    = 'RTCUR02'.
   alv_git_fieldcat-reptext_ddic = 'Curr.Key Trans. Curr'.
   alv_git_fieldcat-seltext_l    = 'Curr.Key Trans. Curr'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'POPER'.
@@ -358,6 +371,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Posting period'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'BUDAT'.
@@ -365,6 +379,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Posting Date'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'BLDAT'.
@@ -372,6 +387,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Document Date'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'EBELN'.
@@ -379,6 +395,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Purchasing Document'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'USNAM'.
@@ -386,6 +403,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'User name'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'LIFNR'.
@@ -393,6 +411,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Vendor'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'BWART'.
@@ -400,6 +419,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'MM Trans. Type'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '20'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'CONCT'.
@@ -407,6 +427,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Concatenado'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '15'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'MENGE'.
@@ -414,6 +435,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Cantidad'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'MEINS'.
@@ -421,6 +443,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Unidad de Medida'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '15'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'WRBTR'.
@@ -428,6 +451,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Amount In Document'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'WAERS01'.
@@ -435,6 +459,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Currency'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '15'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'DMBTR'.
@@ -442,6 +467,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Amount In Local'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE01'.
@@ -449,6 +475,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Precio Po En Moneda Original  '.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'WAERS02'.
@@ -456,6 +483,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Currency'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'UKURS'.
@@ -463,6 +491,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Tc Std: Usd'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE02'.
@@ -470,6 +499,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Precio Po Al Tipo De Cambio Estandar'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '6'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'HSWAE'.
@@ -477,6 +507,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Local Currency'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE03'.
@@ -484,6 +515,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Tipo De Cambio Real'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE04'.
@@ -491,6 +523,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Costo Estandar En Pesos Mxn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE05'.
@@ -498,6 +531,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Costo Estandar En Usd'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE06'.
@@ -505,6 +539,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Variación Por Tipo De Cambio Mxn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE07'.
@@ -512,6 +547,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Variacion Por Precio De Compra Mxn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE08'.
@@ -519,6 +555,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Ppv Total Determinada En Pesos Mxn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'PRICE09'.
@@ -526,13 +563,15 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Aacounting Vs Ppv Total Mxn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
-  alv_git_fieldcat-fieldname    = 'PRICE010'.
+  alv_git_fieldcat-fieldname    = 'PRICE10'.
   alv_git_fieldcat-reptext_ddic = 'Ppv - Variacion En Precio Usd'.
   alv_git_fieldcat-seltext_l    = 'Ppv - Variacion En Precio Usd'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'LIFNR'.
@@ -540,6 +579,7 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Proveedor'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '10'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'WEEKLY'.
@@ -547,13 +587,16 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l    = 'Semana'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
-  alv_git_fieldcat-outputlen    = '12'.
-  alv_git_fieldcat-tabname      = 'IT_ALV'.
-  alv_git_fieldcat-fieldname    = 'REGLA'.
-  alv_git_fieldcat-reptext_ddic = 'Recla Coto'.
-  alv_git_fieldcat-seltext_l    = 'Recla Coto'.
-  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+*  Por definir
+*  CLEAR:alv_git_fieldcat.
+*  alv_git_fieldcat-outputlen    = '12'.
+*  alv_git_fieldcat-tabname      = 'IT_ALV'.
+*  alv_git_fieldcat-fieldname    = 'REGLA'.
+*  alv_git_fieldcat-reptext_ddic = 'Recla Coto'.
+*  alv_git_fieldcat-seltext_l    = 'Recla Coto'.
+*  APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR:alv_git_fieldcat.
   alv_git_fieldcat-outputlen    = '12'.
   alv_git_fieldcat-tabname      = 'IT_ALV'.
   alv_git_fieldcat-fieldname    = 'MTART'.
@@ -582,24 +625,30 @@ FORM alv_listado  USING ppp_itab LIKE it_alv[].
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
     EXPORTING
-      i_buffer_active    = 'X'
-*     I_BACKGROUND_ID    = 'ALV_BACKGROUND'
-*     i_callback_top_of_page = 'TOP_OF_PAGE'
-      i_callback_program = sy-repid
-*     i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'PF_STATUS'
 *     I_CALLBACK_USER_COMMAND  = 'USER_COMMAND'
-      is_layout          = lf_layout
-      it_fieldcat        = alv_git_fieldcat[]
-*     it_special_groups  = lf_sp_group
-      i_save             = 'X'
+      is_layout                = lf_layout
+      it_fieldcat              = alv_git_fieldcat[]
+*     it_special_groups        = lf_sp_group
+      i_save                   = 'X'
     TABLES
-      t_outtab           = ppp_itab.
+      t_outtab                 = ppp_itab.
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid
+          TYPE sy-msgty
+        NUMBER sy-msgno
+          WITH sy-msgv1
+               sy-msgv2
+               sy-msgv3
+               sy-msgv4.
+  ENDIF.
 
 ENDFORM.
 
 *///////////////////////////////      Standard Buttons
-*FORM pf_status USING rt_extab TYPE slis_t_extab.
-*
-*  SET PF-STATUS 'STANDARD'.
-*
-*ENDFORM.
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+
+  SET PF-STATUS 'ZSTANDARD'.
+
+ENDFORM.
