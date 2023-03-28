@@ -1,9 +1,9 @@
 *&---------------------------------------------------------------------*
-*& Report  ZMB52
+*& Report  ZMM_REPLICATE_MB52
 *&
 *&---------------------------------------------------------------------*
-*& Creacion de  Johan Rodrigues  consutor ABAP 16/032023
-*&
+*& Creación de Johan Rodríguez
+*& Consultor ABAP 16/03/2023
 *&---------------------------------------------------------------------*
 REPORT zmm_replicate_mb52.
 
@@ -61,27 +61,24 @@ DATA:
   wa_ekbe  TYPE ekbe,
   wa_t001l TYPE t001l.
 
-DATA: week_number TYPE scal-week.
-
+DATA: week_number TYPE scal-week,
+      price_d4    TYPE dec11_4.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME TITLE text-t01.
 SELECT-OPTIONS: s_matnr FOR mard-matnr.
-SELECT-OPTIONS: s_werks FOR mard-werks DEFAULT '0547'.
-SELECT-OPTIONS: s_lgort FOR mard-lgort.
+SELECT-OPTIONS: s_werks FOR mard-werks DEFAULT '0547' OBLIGATORY.
+SELECT-OPTIONS: s_lgort FOR mard-lgort DEFAULT '2002' OPTION NE.
 SELECTION-SCREEN: END OF BLOCK b1.
-
 
 SELECTION-SCREEN: BEGIN OF BLOCK b2 WITH FRAME TITLE text-t02.
 SELECT-OPTIONS: s_mtart FOR mara-mtart.
-SELECT-OPTIONS: s_matkl FOR mara-matkl DEFAULT 'STEEL'.
+SELECT-OPTIONS: s_matkl FOR mara-matkl DEFAULT 'STEEL' OBLIGATORY.
 SELECTION-SCREEN: END OF BLOCK b2.
-
 
 SELECTION-SCREEN: BEGIN OF BLOCK b3 WITH FRAME TITLE text-t03.
 PARAMETERS:     p_box1 AS CHECKBOX DEFAULT 'X'.  "Also Select Special Stocks
 SELECT-OPTIONS: s_sobkz FOR mslb-sobkz.
 SELECTION-SCREEN: END OF BLOCK b3.
-
 
 SELECTION-SCREEN: BEGIN OF BLOCK b4 WITH FRAME TITLE text-t04.
 PARAMETERS: p_box2 AS CHECKBOX.      "No zero stock lines
@@ -90,61 +87,85 @@ SELECTION-SCREEN: END OF BLOCK b4.
 
 START-OF-SELECTION .
 
+  " Validar existencia de materiales
   SELECT *
    FROM mard
-   INTO TABLE it_mard
-    WHERE matnr IN s_matnr
-      AND werks IN s_werks
-      AND lgort IN s_lgort.
+   INTO TABLE @DATA(lt_mard)
+    WHERE matnr IN @s_matnr
+      AND werks IN @s_werks
+      AND lgort IN @s_lgort.
 
-  IF it_mard[] IS NOT INITIAL.
+  IF lt_mard[] IS NOT INITIAL.
 
     SELECT *
       FROM mara
       INTO TABLE it_mara
-      FOR ALL ENTRIES IN it_mard
-        WHERE matnr EQ it_mard-matnr
+      FOR ALL ENTRIES IN lt_mard
+        WHERE matnr EQ lt_mard-matnr
           AND mtart IN s_mtart
           AND matkl IN s_matkl.
 
-    SELECT *
-      FROM makt
-      INTO TABLE it_makt
-       FOR ALL ENTRIES IN it_mard
-       WHERE matnr EQ it_mard-matnr.
+    IF it_mara[] IS NOT INITIAL.
 
-    SELECT *
-      FROM mslb
-      INTO TABLE it_mslb
-      FOR ALL ENTRIES IN it_mard
-        WHERE matnr EQ it_mard-matnr
-          AND werks EQ it_mard-werks
-          AND lfgja EQ it_mard-lfgja
-          AND lfmon EQ it_mard-lfmon
-          AND sobkz IN s_sobkz.
+      SELECT *
+        FROM makt
+        INTO TABLE it_makt
+         FOR ALL ENTRIES IN it_mara
+         WHERE matnr EQ it_mara-matnr
+           AND spras EQ sy-langu.
 
-    SELECT *
-      FROM mbew
-      INTO TABLE it_mbew
-      FOR ALL ENTRIES IN it_mard
-      WHERE matnr EQ it_mard-matnr
-        AND vprsv = 'S' .
+      " Valida datos filtrados desde MARA
+      SELECT *
+       FROM mard
+       INTO TABLE it_mard
+        FOR ALL ENTRIES IN it_mara
+        WHERE matnr EQ it_mara-matnr
+          AND werks IN s_werks
+          AND lgort IN s_lgort.
 
-    SELECT *
-      FROM t001l
-      INTO TABLE it_t001l
-      FOR ALL ENTRIES IN it_mard
-      WHERE werks EQ it_mard-werks
-        AND lgort EQ it_mard-lgort.
+      IF it_mard[] IS NOT INITIAL.
+
+        SELECT *
+          FROM mslb
+          INTO TABLE it_mslb
+          FOR ALL ENTRIES IN it_mard
+            WHERE matnr EQ it_mard-matnr
+              AND werks EQ it_mard-werks
+*          AND lfgja EQ it_mard-lfgja
+*          AND lfmon EQ it_mard-lfmon
+              AND sobkz IN s_sobkz.
+
+        SELECT *
+          FROM mbew
+          INTO TABLE it_mbew
+          FOR ALL ENTRIES IN it_mard
+          WHERE matnr EQ it_mard-matnr
+            AND vprsv = 'S'.
+
+        SELECT *
+          FROM t001l
+          INTO TABLE it_t001l
+          FOR ALL ENTRIES IN it_mard
+          WHERE werks EQ it_mard-werks
+            AND lgort EQ it_mard-lgort.
+
+      ENDIF.
+
+    ENDIF.
 
   ENDIF.
 
 
   LOOP AT it_mard INTO wa_mard.
 
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        input  = wa_mard-matnr
+      IMPORTING
+        output = wa_alv-matnr.                      "Material
+
     wa_alv-waers = 'MXN'.                           "Currency
     wa_alv-werks = wa_mard-werks.                   "Plant
-    wa_alv-matnr = wa_mard-matnr.                   "Material
     wa_alv-lgort = wa_mard-lgort.                   "Storage Location
 
     READ TABLE it_t001l INTO wa_t001l WITH KEY werks = wa_mard-werks lgort = wa_mard-lgort.
@@ -181,23 +202,25 @@ START-OF-SELECTION .
       wa_alv-maktx = wa_makt-maktx.                 "Material Description
     ENDIF.
 
+    CLEAR: wa_mbew, price_d4.
     READ TABLE it_mbew INTO wa_mbew WITH KEY matnr = wa_mard-matnr. "BWKEY search later
     IF sy-subrc = 0.
-      wa_alv-mat_price = wa_mbew-stprs / wa_mbew-peinh. "Material Price
+*      wa_alv-mat_price = wa_mbew-stprs / wa_mbew-peinh. "Material Price
+      price_d4 = wa_mbew-stprs / wa_mbew-peinh. "Material Price
     ENDIF.
 
     wa_alv-labst    = wa_mard-labst.                      "Unrestricted
-    wa_alv-salk3_vu = wa_alv-labst * wa_alv-mat_price.    "Value Unrestricted
+    wa_alv-salk3_vu = wa_alv-labst * price_d4. "wa_alv-mat_price.    "Value Unrestricted
     wa_alv-trauml   = wa_mard-umlme.                      "Transit / Transfer
-    wa_alv-salk3_vt = wa_alv-trauml * wa_alv-mat_price.   "Value in Transit/transfer
+    wa_alv-salk3_vt = wa_alv-trauml * price_d4. "wa_alv-mat_price.   "Value in Transit/transfer
     wa_alv-insme    = wa_mard-insme.                      "Quality Inspection
-    wa_alv-salk3_vq = wa_alv-insme * wa_alv-mat_price.    "Value of Quality Inspection
+    wa_alv-salk3_vq = wa_alv-insme * price_d4. "wa_alv-mat_price.    "Value of Quality Inspection
     wa_alv-einme    = wa_mard-einme.                      "Restricted
-    wa_alv-salk3_vr = wa_alv-einme * wa_alv-mat_price.    "Value of Restricted
+    wa_alv-salk3_vr = wa_alv-einme * price_d4. "wa_alv-mat_price.    "Value of Restricted
     wa_alv-speme    = wa_mard-speme.                      "Block
-    wa_alv-salk3_vb = wa_alv-speme * wa_alv-mat_price.    "Value of Blocked
+    wa_alv-salk3_vb = wa_alv-speme * price_d4. "wa_alv-mat_price.    "Value of Blocked
     wa_alv-retme    = wa_mard-retme.                      "Returns
-    wa_alv-salk3_rb = wa_alv-retme * wa_alv-mat_price.    "Value of Returns Blocked
+    wa_alv-salk3_rb = wa_alv-retme * price_d4. "wa_alv-mat_price.    "Value of Returns Blocked
 
     "Save data from MARD
     APPEND wa_alv TO it_alv.
@@ -231,14 +254,27 @@ START-OF-SELECTION .
 
       READ TABLE it_alv INTO wa_alv WITH KEY matnr = wa_mslb-matnr werks = wa_mslb-werks.
       IF sy-subrc EQ 0.
-        wa_alv-labst = wa_mslb-lblab. "lbvla.                      "Unrestricted
-        wa_alv-ssnum = wa_mslb-lifnr. "ssnum.              "Special Stock Number
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            input  = wa_mslb-lifnr
+          IMPORTING
+            output = wa_alv-ssnum.                         "Special Stock Number
+
+        CLEAR: wa_mbew, price_d4.
+        READ TABLE it_mbew INTO wa_mbew WITH KEY matnr = wa_mslb-matnr bwkey = wa_mslb-werks..
+        IF sy-subrc = 0.
+*          wa_alv-mat_price = wa_mbew-stprs / wa_mbew-peinh.  "Material Price
+          price_d4 = wa_mbew-stprs / wa_mbew-peinh.           "Material Price
+        ENDIF.
+
+        wa_alv-labst = wa_mslb-lblab. "lbvla.              "Unrestricted
         wa_alv-insme = wa_mslb-lbins.                      "Quality Inspection
         wa_alv-einme = wa_mslb-lbein.                      "Restricted
 
-        wa_alv-salk3_vu = wa_alv-labst * wa_alv-mat_price. "Value Unrestricted
-        wa_alv-salk3_vq = wa_alv-insme * wa_alv-mat_price. "Value of Quality Inspection
-        wa_alv-salk3_vr = wa_alv-einme * wa_alv-mat_price. "Value of Restricted
+        wa_alv-salk3_vu = wa_alv-labst * price_d4. "wa_alv-mat_price. "Value Unrestricted
+        wa_alv-salk3_vq = wa_alv-insme * price_d4. "wa_alv-mat_price. "Value of Quality Inspection
+        wa_alv-salk3_vr = wa_alv-einme * price_d4. "wa_alv-mat_price. "Value of Restricted
 
         CLEAR: wa_alv-lgort, wa_alv-lgobe.
 
@@ -253,11 +289,16 @@ START-OF-SELECTION .
 
 
   IF p_box2 EQ 'X'.
-    DELETE it_alv WHERE labst < 1..
+    DELETE it_alv WHERE labst < 1.
   ENDIF.
 
-  SORT it_alv ASCENDING BY matnr werks lgort.
+*  DELETE it_alv WHERE matkl NE 'STEEL'.
+
+  SORT it_alv ASCENDING BY matnr werks lgort ssnum.
   IF it_alv[] IS NOT INITIAL.
+
+*    DELETE FROM zmm_stock_matnr.
+*    COMMIT WORK AND WAIT.
 
     MODIFY zmm_stock_matnr FROM TABLE it_alv.
     COMMIT WORK AND WAIT.
@@ -307,73 +348,80 @@ ENDFORM.
 FORM alv_ini_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '5'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'WERKS'.
-  alv_git_fieldcat-seltext_l = 'Plant'.
+  alv_git_fieldcat-seltext_l = 'Plnt'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '5'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'MTART'.
-  alv_git_fieldcat-seltext_l = 'Material Type'.
+  alv_git_fieldcat-seltext_l = 'MTyp'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '10'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'MATKL'.
-  alv_git_fieldcat-seltext_l = 'Material Group'.
+  alv_git_fieldcat-seltext_l = 'Matl Group'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '14'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'MATNR'.
   alv_git_fieldcat-seltext_l = 'Material Number'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '30'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'MAKTX'.
   alv_git_fieldcat-seltext_l = 'Material Description'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '5'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'LGORT'.
-  alv_git_fieldcat-seltext_l = 'Description of Storage Location'.
+  alv_git_fieldcat-seltext_l = 'SLoc'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-outputlen = '20'.
+  alv_git_fieldcat-tabname   = 'IT_ALV '.
+  alv_git_fieldcat-fieldname = 'LGOBE'.
+  alv_git_fieldcat-seltext_l = 'SLoc Description'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SSNUM'.
-  alv_git_fieldcat-seltext_l = 'Special stock number'.
+  alv_git_fieldcat-seltext_l = 'Special Stock'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '5'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'MEINS'.
-  alv_git_fieldcat-seltext_l = 'Base Unit of Measure'.
+  alv_git_fieldcat-seltext_l = 'BUn'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = ''.
+  alv_git_fieldcat-outputlen = '5'.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'WAERS'.
-  alv_git_fieldcat-seltext_l = 'Currency Key'.
+  alv_git_fieldcat-seltext_l = 'Crcy'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'LABST'.
-  alv_git_fieldcat-seltext_l = 'Valuated Unrestricted-Use Stock'.
+  alv_git_fieldcat-seltext_l = 'Unrestricted'. "'Valuated Unrestricted-Use Stock'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
@@ -387,35 +435,35 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'TRAUML'.
-  alv_git_fieldcat-seltext_l = 'Total Stock in Transit and in Transfer'.
+  alv_git_fieldcat-seltext_l = 'Transit/Transf.'. "'Total Stock in Transit and in Transfer'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SALK3_VT'.
-  alv_git_fieldcat-seltext_l = '16  Value in Transit/Transfer'.
+  alv_git_fieldcat-seltext_l = 'Val. in Trans/Tfr'. "'Value in Transit/Transfer'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'INSME'.
-  alv_git_fieldcat-seltext_l = 'Stock in Quality Inspection'.
+  alv_git_fieldcat-seltext_l = 'In Quality Insp.'. "'Stock in Quality Inspection'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SALK3_VQ'.
-  alv_git_fieldcat-seltext_l = 'Value of Quality Inspection '.
+  alv_git_fieldcat-seltext_l = 'Value in QualInsp.'. "'Value of Quality Inspection '.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'EINME'.
-  alv_git_fieldcat-seltext_l = 'Total Stock of All Restricted Batches'.
+  alv_git_fieldcat-seltext_l = 'Restricted-Use'. "'Total Stock of All Restricted Batches'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
@@ -429,28 +477,28 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SPEME'.
-  alv_git_fieldcat-seltext_l = 'Blocked Stock'.
+  alv_git_fieldcat-seltext_l = 'Blocked'. "'Blocked Stock'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SALK3_VB'.
-  alv_git_fieldcat-seltext_l = 'Value of Blocked'.
+  alv_git_fieldcat-seltext_l = 'Value BlockedStock'. "'Value of Blocked'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'RETME'.
-  alv_git_fieldcat-seltext_l = 'Blocked Stock Returns'.
+  alv_git_fieldcat-seltext_l = 'Returns'. "'Blocked Stock Returns'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = ''.
   alv_git_fieldcat-tabname   = 'IT_ALV '.
   alv_git_fieldcat-fieldname = 'SALK3_RB'.
-  alv_git_fieldcat-seltext_l = 'Value of Returns Blocked'.
+  alv_git_fieldcat-seltext_l = 'Value Rets Blocked'. "'Value of Returns Blocked'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
 ENDFORM.
