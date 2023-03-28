@@ -2,8 +2,8 @@
 *& Report  ZMM_ACTUAL_LINE_PRICES
 *&
 *&---------------------------------------------------------------------*
-*&
-*&
+*& Creación de Johan Rodríguez
+*& Consultor ABAP 09/03/2023
 *&---------------------------------------------------------------------*
 REPORT zmm_actual_line_prices.
 
@@ -29,9 +29,9 @@ DATA: it_alv TYPE TABLE OF zmm_actual_line,
       wa_alv TYPE zmm_actual_line.
 
 SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME." TITLE text-t01.
-PARAMETERS: p_rbukrs TYPE glpca-rbukrs OBLIGATORY.                       "Company Code
+PARAMETERS: p_rbukrs TYPE glpca-rbukrs DEFAULT '0547' OBLIGATORY.                       "Company Code
 PARAMETERS: p_fiscal TYPE glpca-ryear DEFAULT sy-datum(4) OBLIGATORY.    "Fiscal Year
-PARAMETERS: p_number TYPE glpca-racct DEFAULT 210004010.                 "Account Number
+PARAMETERS: p_number TYPE glpca-racct DEFAULT '210004010'.                 "Account Number
 
 PARAMETERS: p_rad1 TYPE c RADIOBUTTON GROUP rb1 DEFAULT 'X' USER-COMMAND u1.
 PARAMETERS: p_rad2 TYPE c RADIOBUTTON GROUP rb1.
@@ -51,7 +51,7 @@ AT SELECTION-SCREEN OUTPUT.
         MODIFY SCREEN.
       ENDIF.
     ELSEIF p_rad2 EQ 'X'.
-      CLEAR s_month.
+      REFRESH s_month.
       IF screen-group1 EQ 'AA'.
         screen-active = '0'.
         MODIFY SCREEN.
@@ -128,7 +128,7 @@ START-OF-SELECTION.
 
     wa_alv-client   = sy-mandt.
     wa_alv-refdocnr = wa_glpca-refdocnr. "Ref. Document
-    wa_alv-matnr    = sy-index."wa_glpca-matnr.    "Material
+    wa_alv-matnr    = wa_glpca-matnr.    "Material
     wa_alv-rprctr   = wa_glpca-rprctr.   "Profit Center
     wa_alv-kostl    = wa_glpca-kostl.    "Cost Center
     wa_alv-racct    = wa_glpca-racct.    "Account Number
@@ -237,6 +237,9 @@ START-OF-SELECTION.
 
 *///////////////////////////////      ALV
   IF it_alv[] IS NOT INITIAL.
+
+*    DELETE FROM zmm_stock_matnr.
+*    COMMIT WORK AND WAIT.
 
     MODIFY zmm_actual_line FROM TABLE it_alv.
     COMMIT WORK AND WAIT.
