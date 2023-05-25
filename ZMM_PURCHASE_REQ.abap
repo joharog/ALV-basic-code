@@ -949,11 +949,11 @@ FORM print_form.
       APPEND i_objtxt.
       i_objtxt = '<BR></BR>'.
       APPEND i_objtxt.
-      i_objtxt = '<b>Arturo Luna<b>'.
-      APPEND i_objtxt.
-      i_objtxt = '<BR></BR>'.
-      APPEND i_objtxt.
-      i_objtxt = 'Compras'.
+*      i_objtxt = '<b>Arturo Luna<b>'.
+*      APPEND i_objtxt.
+*      i_objtxt = '<BR></BR>'.
+*      APPEND i_objtxt.
+      i_objtxt = 'Compras Estampado Magna'.
       APPEND i_objtxt.
       i_objtxt = '</BODY></HTML>'.
       APPEND i_objtxt.
@@ -998,11 +998,11 @@ FORM print_form.
 *      APPEND i_objtxt.
 *      i_objtxt = '<BR></BR>'.
 *      APPEND i_objtxt.
-      i_objtxt = '<b>Arturo Luna<b>'.
-      APPEND i_objtxt.
-      i_objtxt = '<BR></BR>'.
-      APPEND i_objtxt.
-      i_objtxt = 'Compras'.
+*      i_objtxt = '<b>Arturo Luna<b>'.
+*      APPEND i_objtxt.
+*      i_objtxt = '<BR></BR>'.
+*      APPEND i_objtxt.
+      i_objtxt = 'Compras Estampado Magna'.
       APPEND i_objtxt.
       i_objtxt = '</BODY></HTML>'.
       APPEND i_objtxt.
@@ -1458,18 +1458,17 @@ FORM generate_oc.
           APPEND w_possched TO t_possched.
 
           t_item_schedules-po_item        = ls_auxoc-bnfpo.
-          t_item_schedules-sched_line     = '0001'.
-          t_item_schedules-delivery_date  = sy-datum.
+          t_item_schedules-delivery_date  = ls_auxoc-lfdat.
           t_item_schedules-quantity       = ls_auxoc-menge.
-          t_item_schedules-del_datcat_ext = '1'.
+*          t_item_schedules-del_datcat_ext = '1'.
+*          t_item_schedules-sched_line     = '0001'.
           APPEND t_item_schedules.
-          "TEST
 
           w_posschedx-po_item        = ls_auxoc-bnfpo. "w_posschedx-po_item + 10.
           w_posschedx-delivery_date  = 'X'.
           w_posschedx-quantity       = 'X'.
-          w_posschedx-del_datcat_ext = 'X'.
-          w_posschedx-sched_line     = '0001'.
+*          w_posschedx-del_datcat_ext = 'X'.
+*          w_posschedx-sched_line     = '0001'.
           APPEND w_posschedx TO t_posschedx.
 ************************
 
