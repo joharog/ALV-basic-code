@@ -90,8 +90,8 @@ DATA: any_ocgen TYPE char1.
 
 DATA: lt_zmm_reqoc TYPE TABLE OF zmm_reqoc.
 
-DATA: FLAG_OC TYPE CHAR1,
-      FLAG_MAIL TYPE CHAR1.
+DATA: flag_oc   TYPE char1,
+      flag_mail TYPE char1.
 
 *&---------------------------------------------------------------------*
 
@@ -150,7 +150,6 @@ FORM show_data.
    FROM eban
    APPENDING TABLE lt_eban
     WHERE werks EQ p_werks
-*      AND banfn IN @p_banfn
       AND ebeln EQ ' '
       AND banpr EQ '05'
       AND matnr EQ ' '
@@ -247,13 +246,25 @@ FORM show_data.
 *        output = ls_alv-lifnr.
 
 *    ls_alv-lfdat = ls_eban-lfdat.
-    CALL FUNCTION 'HR_HK_DIFF_BT_2_DATES'
+
+*    CALL FUNCTION 'HR_HK_DIFF_BT_2_DATES'
+*      EXPORTING
+*        date1         = sy-datum
+*        date2         = ls_eban-badat
+*        output_format = '02'
+*      IMPORTING
+*        days          = lv_days.
+*    IF sy-subrc <> 0.
+** Implement suitable error handling here
+*    ENDIF.
+
+    CALL FUNCTION '/SDF/CMO_DATETIME_DIFFERENCE'
       EXPORTING
-        date1         = sy-datum
-        date2         = ls_eban-badat
-        output_format = '02'
+        date1    = sy-datum
+        date2    = ls_eban-badat
       IMPORTING
-        days          = lv_days.
+        datediff = lv_days.
+
     IF sy-subrc <> 0.
 * Implement suitable error handling here
     ENDIF.
