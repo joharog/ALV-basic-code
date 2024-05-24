@@ -20,47 +20,64 @@ DATA: w_return       LIKE LINE OF t_return.
 DATA: any_ocgen TYPE char1.
 
 TYPES: BEGIN OF ty_data,
-         check         TYPE char1,       "Check Box
-         orden_compra  TYPE ebeln,
+         check                      TYPE char1,       "Check Box
+         orden_compra               TYPE ebeln,
 *        POHEADER
-         comp_code     TYPE bukrs,
-         doc_type      TYPE esart,
-         vendor        TYPE elifn,
-         purch_org     TYPE ekorg,
-         pur_group     TYPE bkgrp,
-         currency      TYPE waers,
+         comp_code                  TYPE bukrs,
+         doc_type                   TYPE esart,
+         vendor                     TYPE elifn,
+         purch_org                  TYPE ekorg,
+         pur_group                  TYPE bkgrp,
+         currency                   TYPE waers,
 
 *        POITEM
-         po_item       TYPE ebelp, "Número de posición del documento de compras
-         acctasscat    TYPE knttp,      "Tipo de imputación
-         epstp         TYPE string, "Sin identificar
-         short_text    TYPE txz01,      "Texto breve
-         material      TYPE matnr18,    "Número de material (18 caracteres)
-         plant         TYPE ewerk,      "Centro
-         stge_loc      TYPE lgort_d,    "Almacén
-         matl_group    TYPE matkl,      "Grupo de artículos
-         quantity_item TYPE bstmg,      "Cantidad de pedido
-         po_unit       TYPE bstme_iso,  "Unidad de medida de pedido
-         net_price     TYPE bapicurext, "Importe de moneda para BAPIs (con 9 decimales)
-         tax_code      TYPE mwskz,      "Indicador IVA
+         po_item                    TYPE ebelp,      "Número de posición del documento de compras
+         acctasscat                 TYPE knttp,      "Tipo de imputación
+         epstp                      TYPE pstyp,      "Tipo de posición del documento de compras
+         short_text                 TYPE txz01,      "Texto breve
+         material                   TYPE matnr18,    "Número de material (18 caracteres)
+         plant                      TYPE ewerk,      "Centro
+         stge_loc                   TYPE lgort_d,    "Almacén
+         matl_group                 TYPE matkl,      "Grupo de artículos
+         quantity_item              TYPE bstmg,      "Cantidad de pedido
+         po_unit                    TYPE bstme_iso,  "Unidad de medida de pedido
+         net_price                  TYPE bapicurext, "Importe de moneda para BAPIs (con 9 decimales)
+         tax_code                   TYPE mwskz,      "Indicador IVA
 
 *        POSCHEDULE
-         delivery_date TYPE eeind,
-         quantity_sche TYPE etmen,
+         delivery_date              TYPE eeind,
+         quantity_sche              TYPE etmen,
 
 *        POACCOUNT
-         gl_account    TYPE saknr, "Número de la cuenta de mayor
-         costcenter    TYPE kostl, "Centro de coste
-         orderid       TYPE aufnr, "Número de orden
+         gl_account                 TYPE saknr, "Número de la cuenta de mayor
+         costcenter                 TYPE kostl, "Centro de coste
+         orderid                    TYPE aufnr, "Número de orden
 
 *        POSERVICES
-         ext_line      TYPE extrow, "Número de línea
-         srvpos        TYPE string, "Sin identificar
-         ktext1        TYPE string, "Sin identificar
-         quantity_serv TYPE mengev, "Cantidad con signo +/-
-         base_uom      TYPE meins,  "Unidad de medida base
-         price_unit    TYPE epein,  "Cantidad base
-         waers         TYPE string, "Sin identificar
+         ext_line                   TYPE extrow,      "Número de línea
+         service                    TYPE asnum,       "Número de servicio
+         ktext1                     TYPE sh_text1,    "Texto breve
+         quantity_serv              TYPE mengev,      "Cantidad
+         base_uom                   TYPE meins,       "Unidad de medida base
+         gr_price                   TYPE bapigrprice, "Precio bruto
+         waers_serv                 TYPE string,      "Moneda servicio
+
+*       ZFIELDS EKPO FOR BAPI EXTENSION
+         zz1_sistema_pdi            TYPE ekpo-zz1_sistema_pdi,
+         zz1_tipodeservicio1_pdi    TYPE ekpo-zz1_tipodeservicio1_pdi,
+         zz1_fuerzadeventa_pdi      TYPE ekpo-zz1_fuerzadeventa_pdi,
+         zz1_placa1_pdi             TYPE ekpo-zz1_placa1_pdi,
+         zz1_ordendetrabajo1_pdi    TYPE ekpo-zz1_ordendetrabajo1_pdi,
+         zz1_tipodefecha_pdi        TYPE ekpo-zz1_tipodefecha_pdi,
+         zz1_kilometraje1_pdi       TYPE ekpo-zz1_kilometraje1_pdi,
+
+*       ZFIELDS EKKO FOR BAPI EXTENSION
+         zz1_agrupadordocumento_pdh TYPE ekko-zz1_agrupadordocumento_pdh,
+         zz1_piloto_pdh             TYPE ekko-zz1_piloto_pdh,
+         zz1_fechapicking1_pdh      TYPE ekko-zz1_fechapicking1_pdh,
+         zz1_placast_pdh            TYPE ekko-zz1_placast_pdh,
+         zz1_motivostraslados_pdh   TYPE ekko-zz1_motivostraslados_pdh,
+         zz1_departamento1_pdh      TYPE ekko-zz1_departamento1_pdh,
        END OF ty_data.
 
 DATA: lt_excel TYPE TABLE OF alsmex_tabline,
@@ -116,7 +133,7 @@ START-OF-SELECTION.
       filename                = p_file
       i_begin_col             = 1
       i_begin_row             = 11
-      i_end_col               = 29
+      i_end_col               = 42
       i_end_row               = 9999
     TABLES
       intern                  = lt_excel
@@ -152,7 +169,7 @@ START-OF-SELECTION.
       WHEN 8.
         ls_data-acctasscat = ls_excel-value.
       WHEN 9.
-        ls_data-epstp = ls_excel-value. "Sin identificar
+        ls_data-epstp = ls_excel-value.   "Sin identificar
       WHEN 10.
         ls_data-material = ls_excel-value.
       WHEN 11.
@@ -182,17 +199,48 @@ START-OF-SELECTION.
       WHEN 23.
         ls_data-ext_line = ls_excel-value.
       WHEN 24.
-        ls_data-srvpos = ls_excel-value. "Sin identificar
+        ls_data-service = ls_excel-value.
       WHEN 25.
-        ls_data-ktext1 = ls_excel-value. "Sin identificar
+        ls_data-ktext1 = ls_excel-value.
       WHEN 26.
         ls_data-quantity_serv = ls_excel-value.
       WHEN 27.
         ls_data-base_uom = ls_excel-value.
       WHEN 28.
-        ls_data-price_unit = ls_excel-value.
+        ls_data-base_uom = ls_excel-value.
       WHEN 29.
-        ls_data-waers = ls_excel-value. "Sin identificar
+        ls_data-waers_serv = ls_excel-value.
+
+
+      WHEN 30.
+        ls_data-zz1_sistema_pdi         = ls_excel-value.
+      WHEN 31.
+        ls_data-zz1_tipodeservicio1_pdi = ls_excel-value.
+      WHEN 32.
+        ls_data-zz1_fuerzadeventa_pdi   = ls_excel-value.
+      WHEN 33.
+        ls_data-zz1_placa1_pdi          = ls_excel-value.
+      WHEN 34.
+        ls_data-zz1_ordendetrabajo1_pdi = ls_excel-value.
+      WHEN 35.
+        ls_data-zz1_tipodefecha_pdi     = ls_excel-value.
+      WHEN 36.
+        ls_data-zz1_kilometraje1_pdi    = ls_excel-value.
+
+      WHEN 37.
+        ls_data-zz1_agrupadordocumento_pdh = ls_excel-value.
+      WHEN 38.
+        ls_data-zz1_piloto_pdh             = ls_excel-value.
+      WHEN 39.
+        CONCATENATE ls_excel-value+6(4) ls_excel-value+3(2) ls_excel-value(2)
+        INTO ls_data-zz1_fechapicking1_pdh.
+      WHEN 40.
+        ls_data-zz1_placast_pdh            = ls_excel-value.
+      WHEN 41.
+        ls_data-zz1_motivostraslados_pdh   = ls_excel-value.
+      WHEN 42.
+        ls_data-zz1_departamento1_pdh      = ls_excel-value.
+
     ENDCASE.
 
     AT END OF row.
@@ -203,7 +251,7 @@ START-OF-SELECTION.
 
 END-OF-SELECTION.
 
-PERFORM call_alv.
+  PERFORM call_alv.
 
 FORM call_alv.
 
@@ -461,6 +509,85 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l = 'Moneda'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_SISTEMA_PDI'.
+  alv_git_fieldcat-seltext_l = 'SISTEMA PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_TIPODESERVICIO1_PDI'.
+  alv_git_fieldcat-seltext_l = 'TIPODESERVICIO PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_FUERZADEVENTA_PDI'.
+  alv_git_fieldcat-seltext_l = 'FUERZA DE VENTA PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_PLACA1_PDI'.
+  alv_git_fieldcat-seltext_l = 'PLACA1 PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_ORDENDETRABAJO1_PDI'.
+  alv_git_fieldcat-seltext_l = 'ORDEN DE TRABAJO1 PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_TIPODEFECHA_PDI'.
+  alv_git_fieldcat-seltext_l = 'TIPO DE FECHA PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_KM_VTA_PDI'.
+  alv_git_fieldcat-seltext_l = 'KM VTA PDI'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_AGRUPADORDOCUMENTO_PDH'.
+  alv_git_fieldcat-seltext_l = 'AGRUPADOR DOCUMENTO PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_PILOTO_PDH'.
+  alv_git_fieldcat-seltext_l = 'PILOTO PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_FECHAPICKING1_PDH'.
+  alv_git_fieldcat-seltext_l = 'FECHA PICKING PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_PLACAST_PDH'.
+  alv_git_fieldcat-seltext_l = 'PLACAST PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_MOTIVOSTRASLADOS_PDH'.
+  alv_git_fieldcat-seltext_l = 'MOTIVOS TRASLADOS PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_DEPARTAMENTO1_PDH'.
+  alv_git_fieldcat-seltext_l = 'DEPARTAMENTO PDH'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+
   CLEAR ls_event_exit.
   ls_event_exit-ucomm        = gc_refresh.    " Refresh
   ls_event_exit-after        = c_x.
@@ -470,7 +597,7 @@ ENDFORM.
 
 *///////////////////////////////      ALV PERFORM_3
 FORM layout_build USING    u_lf_layout TYPE slis_layout_alv.
-
+  u_lf_layout-colwidth_optimize   = 'X'.
 *  u_lf_layout-box_fieldname       = 'CHECK'.  "Checkbox
   u_lf_layout-zebra               = 'X'.      "Streifenmuster
 *  u_lf_layout-get_selinfos        = 'X'.
@@ -567,6 +694,7 @@ DATA  END OF t_return_log.
 
   DATA: t_poheader     LIKE bapimepoheader,
         t_poheaderx    LIKE bapimepoheaderx,
+
         v_number       LIKE bapimereqheader-preq_no,
         t_poitem       TYPE TABLE OF ty_pritem,
         w_poitem       LIKE LINE OF t_poitem,
@@ -601,6 +729,14 @@ DATA  END OF t_return_log.
         lv_tabix       TYPE sy-tabix,
         v_tabixc       TYPE c LENGTH 10,
         v_req.
+
+  DATA: bapi_te_mepoheader  TYPE bapi_te_mepoheader,
+        bapi_te_mepoheaderx TYPE bapi_te_mepoheaderx,
+        bapi_te_mepoitem    TYPE bapi_te_mepoitem,
+        bapi_te_mepoitemx   TYPE bapi_te_mepoitemx,
+        lt_extension        TYPE TABLE OF bapiparex,
+        ls_extension        TYPE bapiparex.
+
 
   DATA: t_item_schedules LIKE bapimeposchedule OCCURS 0 WITH HEADER LINE.
 
@@ -693,6 +829,9 @@ DATA  END OF t_return_log.
         w_poitem-net_price   = ls_auxoc-net_price.
         w_poitem-tax_code    = ls_auxoc-tax_code.
         w_poitem-short_text  = ls_auxoc-short_text.
+        w_poitem-item_cat    = ls_auxoc-epstp.
+        w_poitem-acctasscat  = ls_auxoc-acctasscat.
+        w_poitem-stge_loc    = ls_auxoc-stge_loc.
 
 *        w_poitem-gr_ind      = 'X'.
 *        w_poitem-ir_ind      = 'X'.
@@ -710,12 +849,13 @@ DATA  END OF t_return_log.
         w_poitemx-net_price  = 'X'.
         w_poitemx-tax_code   = 'X'.
         w_poitemx-short_text = 'X'.
+        w_poitemx-item_cat   = 'X'.
+        w_poitemx-acctasscat = 'X'.
+        w_poitemx-stge_loc   = 'X'.
 
-*        w_poitemx-price_unit  = 'X'.
 *        w_poitemx-ir_ind      = 'X'.
 *        w_poitemx-gr_basediv  = 'X'.
 *        w_poitemx-no_rounding = 'X'.
-*        w_poitemx-price_unit  = 'X'.
 *        w_poitemx-conv_num1 = 'X'.
 *        w_poitemx-conv_den1 = 'X'.
 
@@ -725,7 +865,6 @@ DATA  END OF t_return_log.
 *&---------------------------------------------------------------------*
 *&      POSCHEDULE
 *&---------------------------------------------------------------------*
-
         REPLACE ALL OCCURRENCES OF '.' IN ls_auxoc-delivery_date WITH ''.
         CONCATENATE ls_auxoc-delivery_date+4(4)
                     ls_auxoc-delivery_date+2(2)
@@ -742,21 +881,126 @@ DATA  END OF t_return_log.
 *&---------------------------------------------------------------------*
 *&      POACCOUNT
 *&---------------------------------------------------------------------*
-*        w_poaccount-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
-*        w_poaccount-gl_account = ls_auxoc-gl_account.
-*        w_poaccount-costcenter = ls_auxoc-costcenter.
-*        w_poaccount-orderid    = ls_auxoc-orderid.
-*        w_poaccountx-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
-*        w_poaccountx-quantity   = 'X'.
-*        w_poaccountx-gl_account = 'X'.
-*        w_poaccountx-costcenter = 'X'.
-*        w_poaccountx-orderid    = 'X'.
-*        APPEND w_poaccount TO t_poaccount.
-*        APPEND w_poaccountx TO t_poaccountx.
+        w_poaccount-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
+        w_poaccount-quantity   = ls_auxoc-quantity_item.
+        w_poaccount-gl_account = ls_auxoc-gl_account.
+        w_poaccount-costcenter = |{ ls_auxoc-costcenter ALPHA = IN }|.
+        w_poaccount-orderid    = ls_auxoc-orderid.
+
+        w_poaccountx-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
+        w_poaccountx-quantity   = 'X'.
+        w_poaccountx-gl_account = 'X'.
+        w_poaccountx-costcenter = 'X'.
+        w_poaccountx-orderid    = 'X'.
+
+        APPEND w_poaccount TO t_poaccount.
+        APPEND w_poaccountx TO t_poaccountx.
 
 *&---------------------------------------------------------------------*
 *&      POSERVICES
 *&---------------------------------------------------------------------*
+        w_poservices-ext_line   = ls_auxoc-ext_line.      "EXTROW       Número de linea del servicios
+        w_poservices-service    = ls_auxoc-service.       "ASNUM        Número de servicio
+        w_poservices-short_text = ls_auxoc-ktext1.        "SH_TEXT1     Texto breve
+        w_poservices-quantity   = ls_auxoc-quantity_serv. "MENGEV       Cantidad
+        w_poservices-base_uom   = ls_auxoc-base_uom.      "MEINS        Unidad de medida base
+        w_poservices-gr_price   = ls_auxoc-gr_price.      "BAPIGRPRICE  Precio bruto
+
+        APPEND w_poservices TO t_poservices.
+
+*&---------------------------------------------------------------------*
+*&      BAPI EXTENSION_IN
+*&---------------------------------------------------------------------*
+        REFRESH: lt_extension.
+
+        "EXTENSION FOR EKKO
+        bapi_te_mepoheader-po_number                  = ''.
+        bapi_te_mepoheader-zz1_agrupadordocumento_pdh = ls_auxoc-zz1_agrupadordocumento_pdh.
+        bapi_te_mepoheader-zz1_piloto_pdh             = ls_auxoc-zz1_piloto_pdh.
+        bapi_te_mepoheader-zz1_fechapicking1_pdh      = ls_auxoc-zz1_fechapicking1_pdh.
+        bapi_te_mepoheader-zz1_placast_pdh            = ls_auxoc-zz1_placast_pdh.
+        bapi_te_mepoheader-zz1_motivostraslados_pdh   = ls_auxoc-zz1_motivostraslados_pdh.
+        bapi_te_mepoheader-zz1_departamento1_pdh      = ls_auxoc-zz1_departamento1_pdh.
+
+        ls_extension-structure = 'BAPI_TE_MEPOHEADER'.
+*        ls_extension-valuepart1 = bapi_te_mepoheader.
+
+        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+          EXPORTING
+            iv_move_from = bapi_te_mepoheader
+          CHANGING
+            cv_move_to   = ls_extension-valuepart1.
+
+        APPEND ls_extension TO lt_extension.
+        CLEAR: ls_extension.
+
+        bapi_te_mepoheaderx-po_number                  = ''.
+        bapi_te_mepoheaderx-zz1_agrupadordocumento_pdh = 'X'.
+        bapi_te_mepoheaderx-zz1_piloto_pdh             = 'X'.
+        bapi_te_mepoheaderx-zz1_fechapicking1_pdh      = 'X'.
+        bapi_te_mepoheaderx-zz1_placast_pdh            = 'X'.
+        bapi_te_mepoheaderx-zz1_motivostraslados_pdh   = 'X'.
+        bapi_te_mepoheaderx-zz1_departamento1_pdh      = 'X'.
+
+        ls_extension-structure = 'BAPI_TE_MEPOHEADERX'.
+*        ls_extension-valuepart1 = bapi_te_mepoheaderx.
+
+        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+          EXPORTING
+            iv_move_from = bapi_te_mepoheaderx
+          CHANGING
+            cv_move_to   = ls_extension-valuepart1.
+
+        APPEND ls_extension TO lt_extension.
+        CLEAR: ls_extension.
+
+
+        "EXTENSION FOR EKPO
+        bapi_te_mepoitem-po_item                 = |{ ls_auxoc-po_item ALPHA = IN }|.
+        bapi_te_mepoitem-zz1_sistema_pdi         = ls_auxoc-zz1_sistema_pdi.
+        bapi_te_mepoitem-zz1_tipodeservicio1_pdi = ls_auxoc-zz1_tipodeservicio1_pdi.
+        bapi_te_mepoitem-zz1_fuerzadeventa_pdi   = ls_auxoc-zz1_fuerzadeventa_pdi.
+        bapi_te_mepoitem-zz1_placa1_pdi          = ls_auxoc-zz1_placa1_pdi.
+        bapi_te_mepoitem-zz1_ordendetrabajo1_pdi = ls_auxoc-zz1_ordendetrabajo1_pdi.
+        bapi_te_mepoitem-zz1_tipodefecha_pdi     = ls_auxoc-zz1_tipodefecha_pdi.
+        bapi_te_mepoitem-zz1_kilometraje1_pdi    = ls_auxoc-zz1_kilometraje1_pdi.
+
+        ls_extension-structure = 'BAPI_TE_MEPOITEM'.
+*        ls_extension-valuepart1 = bapi_te_mepoitem.
+
+        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+          EXPORTING
+            iv_move_from = bapi_te_mepoitem
+          CHANGING
+            cv_move_to   = ls_extension-valuepart1.
+
+        APPEND ls_extension TO lt_extension.
+        CLEAR: ls_extension.
+
+        bapi_te_mepoitemx-po_item                 = |{ ls_auxoc-po_item ALPHA = IN }|.
+        bapi_te_mepoitemx-zz1_sistema_pdi         = 'X'.
+        bapi_te_mepoitemx-zz1_tipodeservicio1_pdi = 'X'.
+        bapi_te_mepoitemx-zz1_fuerzadeventa_pdi   = 'X'.
+        bapi_te_mepoitemx-zz1_placa1_pdi          = 'X'.
+        bapi_te_mepoitemx-zz1_ordendetrabajo1_pdi = 'X'.
+        bapi_te_mepoitemx-zz1_tipodefecha_pdi     = 'X'.
+        bapi_te_mepoitemx-zz1_kilometraje1_pdi    = 'X'.
+
+        ls_extension-structure = 'BAPI_TE_MEPOITEMX'.
+*        ls_extension-valuepart1 = bapi_te_mepoitemx.
+
+        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+          EXPORTING
+            iv_move_from = bapi_te_mepoitemx
+          CHANGING
+            cv_move_to   = ls_extension-valuepart1.
+
+        APPEND ls_extension TO lt_extension.
+        CLEAR: ls_extension.
+
+
+*&---------------------------------------------------------------------*
+        BREAK-POINT.
         CALL FUNCTION 'BAPI_PO_CREATE1'
           EXPORTING
             poheader         = t_poheader
@@ -764,13 +1008,14 @@ DATA  END OF t_return_log.
             no_price_from_po = 'X'
           TABLES
             return           = t_return_log
+            extensionin      = lt_extension
             poitem           = t_poitem
             poitemx          = t_poitemx
-*           poaccount        = t_poaccount
-*           poaccountx       = t_poaccountx
+            poaccount        = t_poaccount
+            poaccountx       = t_poaccountx
             poschedule       = t_poschedule
-            poschedulex      = t_poschedulex.
-*           poservices       = ""
+            poschedulex      = t_poschedulex
+            poservices       = t_poservices.
 
 
         READ TABLE t_return_log INTO w_return_log  WITH KEY type = 'S' id = '06' number = '017'.
@@ -787,8 +1032,8 @@ DATA  END OF t_return_log.
 
           any_ocgen  = 'X'.
 
-          clear: t_poheader, t_poheaderx.
-          refresh: t_return_log, t_poitem, t_poitemx, t_poschedule, t_poschedulex.
+          CLEAR: t_poheader, t_poheaderx.
+          REFRESH: t_return_log, t_poitem, t_poitemx, t_poschedule, t_poschedulex.
 
         ELSE.
 
@@ -802,7 +1047,7 @@ DATA  END OF t_return_log.
 
       IF any_ocgen EQ 'X'.
         MESSAGE 'Se han creado ordenes de compras. Actualizar el reporte mediante el boton "Actualizar Lista"' TYPE 'S'." DISPLAY LIKE 'I'.
-        Clear: any_ocgen.
+        CLEAR: any_ocgen.
       ENDIF.
 
     ENDIF.
