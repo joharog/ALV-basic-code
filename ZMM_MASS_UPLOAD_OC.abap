@@ -1000,7 +1000,7 @@ DATA  END OF t_return_log.
 
 
 *&---------------------------------------------------------------------*
-        BREAK-POINT.
+
         CALL FUNCTION 'BAPI_PO_CREATE1'
           EXPORTING
             poheader         = t_poheader
