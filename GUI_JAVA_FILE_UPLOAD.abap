@@ -19,6 +19,7 @@ FIELD-SYMBOLS: <gt_data>   TYPE STANDARD TABLE,
                <gv_fldval> TYPE any.
 
 TYPES: BEGIN OF ty_data,
+         exclude                    TYPE char1,
          check                      TYPE char1,       "Check Box
          orden_compra               TYPE ebeln,
 *        POHEADER
@@ -28,6 +29,7 @@ TYPES: BEGIN OF ty_data,
          purch_org                  TYPE ekorg,
          pur_group                  TYPE bkgrp,
          currency                   TYPE waers,
+         suppl_plnt                 TYPE reswk,
 
 *        POITEM
          po_item                    TYPE ebelp,      "Número de posición del documento de compras
@@ -44,6 +46,7 @@ TYPES: BEGIN OF ty_data,
          tax_code                   TYPE mwskz,      "Indicador IVA
          agreement                  TYPE konnr,      "Número del contrato superior
          agmt_item                  TYPE ktpnr,      "Número de posición del contrato superior
+         suppl_stloc                TYPE reslo,      "Almacén emisor para pedido de traslado
 
 *        POSCHEDULE
          delivery_date              TYPE eeind,
@@ -71,6 +74,7 @@ TYPES: BEGIN OF ty_data,
          zz1_ordendetrabajo1_pdi    TYPE ekpo-zz1_ordendetrabajo1_pdi,
          zz1_tipodefecha_pdi        TYPE ekpo-zz1_tipodefecha_pdi,
          zz1_kilometraje1_pdi       TYPE ekpo-zz1_kilometraje1_pdi,
+         zz1_canal1_pdi             TYPE ekpo-zz1_canal1_pdi,
 
 *       ZFIELDS EKKO FOR BAPI EXTENSION
          zz1_agrupadordocumento_pdh TYPE ekko-zz1_agrupadordocumento_pdh,
@@ -79,6 +83,7 @@ TYPES: BEGIN OF ty_data,
          zz1_placast_pdh            TYPE ekko-zz1_placast_pdh,
          zz1_motivostraslados_pdh   TYPE ekko-zz1_motivostraslados_pdh,
          zz1_departamento1_pdh      TYPE ekko-zz1_departamento1_pdh,
+
        END OF ty_data.
 
 DATA: lt_excel TYPE TABLE OF alsmex_tabline,
@@ -89,22 +94,25 @@ DATA: lt_excel TYPE TABLE OF alsmex_tabline,
 DATA: lt_auxoc TYPE TABLE OF ty_data,
       ls_auxoc TYPE ty_data.
 
+FIELD-SYMBOLS: <fs_data> TYPE ty_data.
+
 TYPE-POOLS: slis.
 
-DATA: lf_sp_group   TYPE slis_t_sp_group_alv,  "MANEJAR GRUPOS DE CAMPOS
-      lf_layout     TYPE slis_layout_alv,      "MANEJAR DISEÑO DE LAYOUT
-      it_topheader  TYPE slis_t_listheader,    "MANEJAR CABECERA DEL REP
-      wa_top        LIKE LINE OF it_topheader, "LÍNEA PARA CABECERA
-      lt_event_exit TYPE slis_t_event_exit,    "Event
-      ls_event_exit TYPE slis_event_exit,      "Event
+DATA: lf_sp_group      TYPE slis_t_sp_group_alv,  "MANEJAR GRUPOS DE CAMPOS
+      lf_layout        TYPE slis_layout_alv,      "MANEJAR DISEÑO DE LAYOUT
+      it_topheader     TYPE slis_t_listheader,    "MANEJAR CABECERA DEL REP
+      wa_top           LIKE LINE OF it_topheader, "LÍNEA PARA CABECERA
+      lt_event_exit    TYPE slis_t_event_exit,    "Event
+      ls_event_exit    TYPE slis_event_exit,      "Event
       alv_git_fieldcat TYPE slis_t_fieldcat_alv WITH HEADER LINE.     "Parametros del catalogo
 
 CONSTANTS: c_x        VALUE 'X',
            gc_refresh TYPE syucomm VALUE '&REFRESH'.
 
-DATA: true_oc  TYPE char1,
-      false_oc TYPE char1,
-      lv_answer TYPE char1.
+DATA: true_oc   TYPE char1,
+      false_oc  TYPE char1,
+      lv_answer TYPE char1,
+      lv_date   TYPE string.
 
 DATA: t_return TYPE TABLE OF bapiret2,
       w_return LIKE LINE OF t_return.
@@ -183,130 +191,143 @@ START-OF-SELECTION.
                 MOVE <gv_fldval> TO ls_data-vendor.
 
                 ASSIGN COMPONENT 'C' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-currency.
+                MOVE <gv_fldval> TO ls_data-suppl_plnt.
 
                 ASSIGN COMPONENT 'D' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-purch_org.
+                MOVE <gv_fldval> TO ls_data-currency.
 
                 ASSIGN COMPONENT 'E' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-pur_group.
+                MOVE <gv_fldval> TO ls_data-purch_org.
 
                 ASSIGN COMPONENT 'F' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-comp_code.
+                MOVE <gv_fldval> TO ls_data-pur_group.
 
                 ASSIGN COMPONENT 'G' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-po_item.
+                MOVE <gv_fldval> TO ls_data-comp_code.
 
                 ASSIGN COMPONENT 'H' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-acctasscat.
+                MOVE <gv_fldval> TO ls_data-po_item.
 
                 ASSIGN COMPONENT 'I' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-epstp.
+                MOVE <gv_fldval> TO ls_data-acctasscat.
 
                 ASSIGN COMPONENT 'J' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-material.
+                MOVE <gv_fldval> TO ls_data-epstp.
 
                 ASSIGN COMPONENT 'K' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-short_text.
+                MOVE <gv_fldval> TO ls_data-material.
 
                 ASSIGN COMPONENT 'L' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-quantity_item.
+                MOVE <gv_fldval> TO ls_data-short_text.
 
                 ASSIGN COMPONENT 'M' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-po_unit.
+                MOVE <gv_fldval> TO ls_data-quantity_item.
 
                 ASSIGN COMPONENT 'N' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-delivery_date.
+                MOVE <gv_fldval> TO ls_data-po_unit.
 
                 ASSIGN COMPONENT 'O' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-net_price.
+                MOVE <gv_fldval> TO ls_data-delivery_date.
 
                 ASSIGN COMPONENT 'P' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-plant.
+                MOVE <gv_fldval> TO ls_data-net_price.
 
                 ASSIGN COMPONENT 'Q' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-matl_group.
+                MOVE <gv_fldval> TO ls_data-plant.
 
                 ASSIGN COMPONENT 'R' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-tax_code.
+                MOVE <gv_fldval> TO ls_data-matl_group.
 
                 ASSIGN COMPONENT 'S' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-stge_loc.
+                MOVE <gv_fldval> TO ls_data-tax_code.
 
                 ASSIGN COMPONENT 'T' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-gl_account.
+                MOVE <gv_fldval> TO ls_data-stge_loc.
 
                 ASSIGN COMPONENT 'U' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-costcenter.
+                MOVE <gv_fldval> TO ls_data-suppl_stloc.
 
                 ASSIGN COMPONENT 'V' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-orderid.
+                MOVE <gv_fldval> TO ls_data-gl_account.
 
                 ASSIGN COMPONENT 'W' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-ext_line.
+                MOVE <gv_fldval> TO ls_data-costcenter.
 
                 ASSIGN COMPONENT 'X' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-service.
+                MOVE <gv_fldval> TO ls_data-orderid.
 
                 ASSIGN COMPONENT 'Y' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-ktext1.
+                MOVE <gv_fldval> TO ls_data-ext_line.
 
                 ASSIGN COMPONENT 'Z' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-quantity_serv.
+                MOVE <gv_fldval> TO ls_data-service.
 
                 ASSIGN COMPONENT 'AA' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-base_uom.
+                MOVE <gv_fldval> TO ls_data-ktext1.
 
                 ASSIGN COMPONENT 'AB' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-gr_price.
+                MOVE <gv_fldval> TO ls_data-quantity_serv.
 
-                ASSIGN COMPONENT 'AC' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-waers_serv.
+                ASSIGN COMPONENT 'AB' OF STRUCTURE <fs_str> TO <gv_fldval>.
+                MOVE <gv_fldval> TO ls_data-base_uom.
 
                 ASSIGN COMPONENT 'AD' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_sistema_pdi.
+                MOVE <gv_fldval> TO ls_data-gr_price.
 
                 ASSIGN COMPONENT 'AE' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_tipodeservicio1_pdi.
+                MOVE <gv_fldval> TO ls_data-waers_serv.
 
                 ASSIGN COMPONENT 'AF' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_fuerzadeventa_pdi.
+                MOVE <gv_fldval> TO ls_data-zz1_sistema_pdi.
 
                 ASSIGN COMPONENT 'AG' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_placa1_pdi.
+                MOVE <gv_fldval> TO ls_data-zz1_tipodeservicio1_pdi.
 
                 ASSIGN COMPONENT 'AH' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_ordendetrabajo1_pdi.
+                MOVE <gv_fldval> TO ls_data-zz1_fuerzadeventa_pdi.
 
                 ASSIGN COMPONENT 'AI' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_tipodefecha_pdi.
+                MOVE <gv_fldval> TO ls_data-zz1_placa1_pdi.
 
                 ASSIGN COMPONENT 'AJ' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_kilometraje1_pdi.
+                MOVE <gv_fldval> TO ls_data-zz1_ordendetrabajo1_pdi.
 
                 ASSIGN COMPONENT 'AK' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_agrupadordocumento_pdh.
+                MOVE <gv_fldval> TO ls_data-zz1_tipodefecha_pdi.
 
                 ASSIGN COMPONENT 'AL' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_piloto_pdh.
+                MOVE <gv_fldval> TO ls_data-zz1_kilometraje1_pdi.
 
                 ASSIGN COMPONENT 'AM' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_fechapicking1_pdh.
+                MOVE <gv_fldval> TO ls_data-zz1_agrupadordocumento_pdh.
 
                 ASSIGN COMPONENT 'AN' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_placast_pdh.
+                MOVE <gv_fldval> TO ls_data-zz1_piloto_pdh.
 
                 ASSIGN COMPONENT 'AO' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_motivostraslados_pdh.
+                MOVE <gv_fldval> TO lv_date.
+
+                IF lv_date IS NOT INITIAL.
+                  ls_data-zz1_fechapicking1_pdh = |{ lv_date+6(4) }{ lv_date+3(2) }{ lv_date(2) }|.
+                ENDIF.
 
                 ASSIGN COMPONENT 'AP' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-zz1_departamento1_pdh.
+                MOVE <gv_fldval> TO ls_data-zz1_placast_pdh.
 
                 ASSIGN COMPONENT 'AQ' OF STRUCTURE <fs_str> TO <gv_fldval>.
-                MOVE <gv_fldval> TO ls_data-agmt_item.
+                MOVE <gv_fldval> TO ls_data-zz1_motivostraslados_pdh.
 
                 ASSIGN COMPONENT 'AR' OF STRUCTURE <fs_str> TO <gv_fldval>.
+                MOVE <gv_fldval> TO ls_data-zz1_departamento1_pdh.
+
+                ASSIGN COMPONENT 'AS' OF STRUCTURE <fs_str> TO <gv_fldval>.
+                MOVE <gv_fldval> TO ls_data-agmt_item.
+
+                ASSIGN COMPONENT 'AT' OF STRUCTURE <fs_str> TO <gv_fldval>.
                 MOVE <gv_fldval> TO ls_data-agreement.
+
+                ASSIGN COMPONENT 'AU' OF STRUCTURE <fs_str> TO <gv_fldval>.
+                MOVE <gv_fldval> TO ls_data-zz1_canal1_pdi.
 
                 APPEND ls_data TO lt_data.
                 CLEAR: ls_data.
@@ -332,6 +353,7 @@ END-OF-SELECTION.
 FORM call_alv.
 
   IF lt_data[] IS NOT INITIAL.
+    DELETE lt_data WHERE doc_type EQ '' AND vendor EQ ''.
     PERFORM alv_report USING lt_data[].
   ELSE.
     MESSAGE 'No Data Found' TYPE 'S' DISPLAY LIKE 'E'.
@@ -397,6 +419,13 @@ FORM alv_ini_fieldcat.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-outputlen = '17'.
+  alv_git_fieldcat-tabname   = 'LT_DATA'.
+  alv_git_fieldcat-fieldname = 'SUPPL_PLNT'.
+  alv_git_fieldcat-seltext_l = 'Centro Suministrador'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
   alv_git_fieldcat-outputlen = '12'.
   alv_git_fieldcat-tabname   = 'LT_DATA'.
   alv_git_fieldcat-fieldname = 'CURRENCY'.
@@ -453,7 +482,7 @@ FORM alv_ini_fieldcat.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
-  alv_git_fieldcat-outputlen = '20'.
+  alv_git_fieldcat-outputlen = '40'.
   alv_git_fieldcat-tabname   = 'LT_DATA'.
   alv_git_fieldcat-fieldname = 'SHORT_TEXT'.
   alv_git_fieldcat-seltext_l = 'Descripcion'.
@@ -513,6 +542,13 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-tabname   = 'LT_DATA'.
   alv_git_fieldcat-fieldname = 'STGE_LOC'.
   alv_git_fieldcat-seltext_l = 'Almacen'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-outputlen = '15'.
+  alv_git_fieldcat-tabname   = 'LT_DATA'.
+  alv_git_fieldcat-fieldname = 'SUPPL_STLOC'.
+  alv_git_fieldcat-seltext_l = 'Almacen Procedencia'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
   CLEAR: alv_git_fieldcat.
@@ -675,6 +711,12 @@ FORM alv_ini_fieldcat.
   alv_git_fieldcat-seltext_l = 'Contrato'.
   APPEND alv_git_fieldcat TO alv_git_fieldcat.
 
+  CLEAR: alv_git_fieldcat.
+  alv_git_fieldcat-tabname   = 'LT_ALV'.
+  alv_git_fieldcat-fieldname = 'ZZ1_CANAL1_PDI'.
+  alv_git_fieldcat-seltext_l = 'Objeto PA'.
+  APPEND alv_git_fieldcat TO alv_git_fieldcat.
+
   CLEAR ls_event_exit.
   ls_event_exit-ucomm        = gc_refresh.
   ls_event_exit-after        = c_x.
@@ -834,15 +876,9 @@ DATA  END OF t_return_log.
 
   CALL METHOD ls_ref1->check_changed_data.
 
-*
   "Temporal para OC
   REFRESH lt_auxoc.
   CLEAR: ls_auxoc.
-*  lt_auxoc[] = lt_data[].
-
-* Eliminar registros que no esten selecionados
-*  DELETE lt_auxoc WHERE check EQ ' '.
-
 
   IF lt_data[] IS INITIAL. "change
 
@@ -850,306 +886,601 @@ DATA  END OF t_return_log.
 
   ELSE.
 
-    CLEAR: w_poitem-po_item,
-           w_poitemx-po_item,
-           w_poaccount-po_item,
-           w_poaccountx-po_item,
-           wa_pocond-itm_number.
 
-    REFRESH: t_potextitem.
+    DATA(itab_count) = lt_data.
+    DELETE itab_count WHERE check EQ ''.
+    DESCRIBE TABLE itab_count LINES DATA(lv_count).
+
+    CLEAR: lv_tabix.
+
+    DATA: lv_pos TYPE posnr_va,
+          flag_p TYPE char1.
 
 
-    IF lt_data[] IS INITIAL. "change
+    CLEAR: lv_pos, flag_p.
 
-      MESSAGE 'Purchase requisitions already generated a purchase order.' TYPE 'S' DISPLAY LIKE 'E'.
 
-    ELSE.
+    LOOP AT lt_data INTO ls_auxoc WHERE check EQ 'X' AND exclude NE 'X'."change
 
-      CLEAR: lv_tabix.
-      LOOP AT lt_data INTO ls_auxoc WHERE check EQ 'X'. "change
+      lv_tabix = sy-tabix.
+      v_tabix  = sy-tabix.
 
-        lv_tabix = sy-tabix.
 
-        CLEAR: t_poheader,
-               t_poheaderx,
-               w_return_log.
+      "Validar que posicion inicie con 10.
+      IF ls_auxoc-po_item EQ 10 AND lv_pos IS INITIAL.
 
-        REFRESH: t_return_log,
-                 t_poitem ,
-                 t_poitemx,
-                 t_poheadertext,
-                 t_potextitem,
-                 t_poaccount,
-                 t_poaccountx,
-                 t_pocond,
-                 t_pocondx,
-                 t_item_schedules,
-                 t_posschedx.
-
-*        LOOP AT lt_auxoc INTO DATA(ls_auxoc) WHERE banfn EQ ls_auxoc-banfn.
-*
-        v_tabix = sy-tabix.
+        lv_pos = ls_auxoc-po_item. "Siempre se llena con 10.
+        flag_p = abap_true.
 
 *&---------------------------------------------------------------------*
-*&      POHEADER
+*&      P O H E A D E R
 *&---------------------------------------------------------------------*
-        t_poheader-comp_code = ls_auxoc-comp_code.
-        t_poheader-doc_type  = ls_auxoc-doc_type.
-        t_poheader-vendor    = |{ ls_auxoc-vendor ALPHA = IN }|.
-        t_poheader-purch_org = ls_auxoc-purch_org.
-        t_poheader-pur_group = ls_auxoc-pur_group.
-        t_poheader-currency  = ls_auxoc-currency.
-        t_poheaderx-comp_code = 'X'.
-        t_poheaderx-doc_type  = 'X'.
-        t_poheaderx-vendor    = 'X'.
-        t_poheaderx-purch_org = 'X'.
-        t_poheaderx-pur_group = 'X'.
-        t_poheaderx-currency  = 'X'.
+        IF ls_auxoc-comp_code IS NOT INITIAL.
+          t_poheader-comp_code  = ls_auxoc-comp_code.
+          t_poheaderx-comp_code = 'X'.
+        ENDIF.
 
-*&---------------------------------------------------------------------*
-*&      POITEM
-*&---------------------------------------------------------------------*
-        w_poitem-po_item     = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poitem-material    = |{ ls_auxoc-material ALPHA = IN }|.
-        w_poitem-plant       = ls_auxoc-plant.
-        w_poitem-quantity    = ls_auxoc-quantity_item.
-        SELECT SINGLE meins INTO w_poitem-po_unit FROM mara WHERE matnr EQ w_poitem-material.
-*        w_poitem-po_unit     = ls_auxoc-po_unit.
-        w_poitem-net_price   = ls_auxoc-net_price.
-        w_poitem-tax_code    = ls_auxoc-tax_code.
-        w_poitem-short_text  = ls_auxoc-short_text.
-        w_poitem-item_cat    = ls_auxoc-epstp.
-        w_poitem-acctasscat  = ls_auxoc-acctasscat.
-        w_poitem-stge_loc    = ls_auxoc-stge_loc.
-        w_poitem-agmt_item   = ls_auxoc-agmt_item.
-        w_poitem-agreement   = ls_auxoc-agreement.
+        IF ls_auxoc-doc_type IS NOT INITIAL.
+          t_poheader-doc_type  = ls_auxoc-doc_type.
+          t_poheaderx-doc_type = 'X'.
+          IF ls_auxoc-doc_type EQ 'ZUB'.
+            t_poheader-suppl_plnt  = ls_auxoc-suppl_plnt.
+            t_poheaderx-suppl_plnt = 'X'.
+          ENDIF.
+        ENDIF.
 
+        IF ls_auxoc-vendor IS NOT INITIAL.
+          t_poheader-vendor     = |{ ls_auxoc-vendor ALPHA = IN }|.
+          t_poheaderx-vendor    = 'X'.
+        ENDIF.
 
-*        w_poitem-gr_ind      = 'X'.
-*        w_poitem-ir_ind      = 'X'.
-*        w_poitem-gr_basediv  = ' '.
-*        w_poitem-no_rounding = 'X'.
-*        w_poitem-price_unit   = 1.
-*        w_poitem-conv_num1 = '1'.
-*        w_poitem-conv_den1 = '1'.
+        IF ls_auxoc-purch_org IS NOT INITIAL.
+          t_poheader-purch_org  = ls_auxoc-purch_org.
+          t_poheaderx-purch_org = 'X'.
+        ENDIF.
 
-        w_poitemx-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poitemx-material   = 'X'.
-        w_poitemx-plant      = 'X'.
-        w_poitemx-quantity   = 'X'.
-        w_poitemx-po_unit    = 'X'.
-        w_poitemx-net_price  = 'X'.
-        w_poitemx-tax_code   = 'X'.
-        w_poitemx-short_text = 'X'.
-        w_poitemx-item_cat   = 'X'.
-        w_poitemx-acctasscat = 'X'.
-        w_poitemx-stge_loc   = 'X'.
-        w_poitemx-agmt_item   = 'X'.
-        w_poitemx-agreement   = 'X'.
+        IF ls_auxoc-pur_group IS NOT INITIAL.
+          t_poheader-pur_group  = ls_auxoc-pur_group.
+          t_poheaderx-pur_group = 'X'.
+        ENDIF.
+
+        IF ls_auxoc-currency IS NOT INITIAL.
+          t_poheader-currency   = ls_auxoc-currency.
+          t_poheaderx-currency  = 'X'.
+        ENDIF.
+
+      ENDIF.
 
 
-*        w_poitemx-ir_ind      = 'X'.
-*        w_poitemx-gr_basediv  = 'X'.
-*        w_poitemx-no_rounding = 'X'.
-*        w_poitemx-conv_num1 = 'X'.
-*        w_poitemx-conv_den1 = 'X'.
+      "LLenamos las tablas.
+      LOOP AT lt_data ASSIGNING FIELD-SYMBOL(<fs_auxoc>) WHERE check EQ 'X' AND exclude NE 'X'.
 
-        APPEND w_poitem TO t_poitem.
-        APPEND w_poitemx TO t_poitemx.
+        DATA(tabix_in) = sy-tabix.
+
+        IF flag_p EQ abap_true OR lv_pos NE <fs_auxoc>-po_item.
+
+          "Borrar en la primera entrada y aplicamos exclusion de las procesadas
+          <fs_auxoc>-exclude = abap_true.
+          CLEAR: flag_p.
 
 *&---------------------------------------------------------------------*
-*&      POSCHEDULE
+*&      P O I T E M
 *&---------------------------------------------------------------------*
-        REPLACE ALL OCCURRENCES OF '.' IN ls_auxoc-delivery_date WITH ''.
-        CONCATENATE ls_auxoc-delivery_date+4(4)
-                    ls_auxoc-delivery_date+2(2)
-                    ls_auxoc-delivery_date(2)
-                    INTO w_poschedule-delivery_date.
-        w_poschedule-po_item        = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poschedule-quantity       = ls_auxoc-quantity_item.
-        w_poschedulex-po_item       = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poschedulex-delivery_date = 'X'.
-        w_poschedulex-quantity      = 'X'.
-        APPEND w_poschedule TO t_poschedule.
-        APPEND w_poschedulex TO t_poschedulex.
+          IF <fs_auxoc>-po_item IS NOT INITIAL.
+            w_poitem-po_item  = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+            w_poitemx-po_item = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+          ENDIF.
+
+          IF <fs_auxoc>-material IS NOT INITIAL.
+            w_poitem-material  = |{ <fs_auxoc>-material ALPHA = IN }|.
+            w_poitemx-material = 'X'.
+            SELECT SINGLE meins INTO w_poitem-po_unit FROM mara WHERE matnr EQ w_poitem-material.
+            w_poitemx-po_unit  = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-plant IS NOT INITIAL.
+            w_poitem-plant  = <fs_auxoc>-plant.
+            w_poitemx-plant = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-quantity_item IS NOT INITIAL.
+            w_poitem-quantity  = <fs_auxoc>-quantity_item.
+            w_poitemx-quantity = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-net_price < 1.
+            SELECT SINGLE kbetr FROM konp INTO w_poitem-net_price
+               WHERE kschl EQ 'PB00' AND knumh EQ ( SELECT knumh FROM a017
+                                                      WHERE lifnr EQ t_poheader-vendor AND matnr EQ w_poitem-material ).
+            w_poitemx-net_price = 'X'.
+          ELSE.
+            w_poitem-net_price  = <fs_auxoc>-net_price.
+            w_poitemx-net_price = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-tax_code IS NOT INITIAL.
+            w_poitem-tax_code  = <fs_auxoc>-tax_code.
+            w_poitemx-tax_code = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-short_text IS NOT INITIAL.
+            w_poitem-short_text  = <fs_auxoc>-short_text.
+            w_poitemx-short_text = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-epstp IS NOT INITIAL.
+            w_poitem-item_cat  = <fs_auxoc>-epstp.
+            w_poitemx-item_cat = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-acctasscat IS NOT INITIAL.
+            w_poitem-acctasscat  = <fs_auxoc>-acctasscat.
+            w_poitemx-acctasscat = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-stge_loc IS NOT INITIAL.
+            w_poitem-stge_loc  = <fs_auxoc>-stge_loc.
+            w_poitemx-stge_loc = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-agmt_item IS NOT INITIAL.
+            w_poitem-agmt_item  = <fs_auxoc>-agmt_item.
+            w_poitemx-agmt_item = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-agreement IS NOT INITIAL.
+            w_poitem-agreement  = <fs_auxoc>-agreement.
+            w_poitemx-agreement = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-suppl_stloc IS NOT INITIAL.
+            w_poitem-suppl_stloc  = <fs_auxoc>-suppl_stloc.
+            w_poitemx-suppl_stloc = 'X'.
+          ENDIF.
+
+          APPEND w_poitem TO t_poitem.
+          APPEND w_poitemx TO t_poitemx.
+
 
 *&---------------------------------------------------------------------*
-*&      POACCOUNT
+*&      P O S C H E D U L E
 *&---------------------------------------------------------------------*
-        w_poaccount-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poaccount-quantity   = ls_auxoc-quantity_item.
-        w_poaccount-gl_account = ls_auxoc-gl_account.
-        w_poaccount-costcenter = |{ ls_auxoc-costcenter ALPHA = IN }|.
-        w_poaccount-orderid    = ls_auxoc-orderid.
+          IF <fs_auxoc>-delivery_date IS NOT INITIAL.
+            REPLACE ALL OCCURRENCES OF '.' IN <fs_auxoc>-delivery_date WITH ''.
+            CONCATENATE <fs_auxoc>-delivery_date+4(4)
+                        <fs_auxoc>-delivery_date+2(2)
+                        <fs_auxoc>-delivery_date(2)
+                        INTO w_poschedule-delivery_date.
+            w_poschedulex-delivery_date = 'X'.
+          ENDIF.
 
-        w_poaccountx-po_item    = |{ ls_auxoc-po_item ALPHA = IN }|.
-        w_poaccountx-quantity   = 'X'.
-        w_poaccountx-gl_account = 'X'.
-        w_poaccountx-costcenter = 'X'.
-        w_poaccountx-orderid    = 'X'.
+          IF <fs_auxoc>-po_item IS NOT INITIAL.
+            w_poschedule-po_item  = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+            w_poschedulex-po_item = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+          ENDIF.
 
-        APPEND w_poaccount TO t_poaccount.
-        APPEND w_poaccountx TO t_poaccountx.
+          IF <fs_auxoc>-quantity_item IS NOT INITIAL.
+            w_poschedule-quantity  = <fs_auxoc>-quantity_item.
+            w_poschedulex-quantity = 'X'.
+          ENDIF.
+
+          APPEND w_poschedule TO t_poschedule.
+          APPEND w_poschedulex TO t_poschedulex.
+
 
 *&---------------------------------------------------------------------*
-*&      POSERVICES
+*&      P O A C C O U N T
 *&---------------------------------------------------------------------*
-        w_poservices-ext_line   = ls_auxoc-ext_line.      "EXTROW       Número de linea del servicios
-        w_poservices-service    = ls_auxoc-service.       "ASNUM        Número de servicio
-        w_poservices-short_text = ls_auxoc-ktext1.        "SH_TEXT1     Texto breve
-        w_poservices-quantity   = ls_auxoc-quantity_serv. "MENGEV       Cantidad
-        w_poservices-base_uom   = ls_auxoc-base_uom.      "MEINS        Unidad de medida base
-        w_poservices-gr_price   = ls_auxoc-gr_price.      "BAPIGRPRICE  Precio bruto
+          IF <fs_auxoc>-po_item IS NOT INITIAL.
+            w_poaccount-po_item    = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+            w_poaccountx-po_item    = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+          ENDIF.
 
-        APPEND w_poservices TO t_poservices.
+          IF <fs_auxoc>-quantity_item IS NOT INITIAL.
+            w_poaccount-quantity   = <fs_auxoc>-quantity_item.
+            w_poaccountx-quantity   = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-gl_account IS NOT INITIAL.
+            w_poaccount-gl_account = <fs_auxoc>-gl_account.
+            w_poaccountx-gl_account = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-costcenter IS NOT INITIAL.
+            w_poaccount-costcenter = |{ <fs_auxoc>-costcenter ALPHA = IN }|.
+            w_poaccountx-costcenter = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-orderid IS NOT INITIAL.
+            w_poaccount-orderid    = <fs_auxoc>-orderid.
+            w_poaccountx-orderid    = 'X'.
+          ENDIF.
+
+          APPEND w_poaccount TO t_poaccount.
+          APPEND w_poaccountx TO t_poaccountx.
+
+
+*&---------------------------------------------------------------------*
+*&      P O S E R V I C E S
+*&---------------------------------------------------------------------*
+          w_poservices-service    = <fs_auxoc>-service.       "ASNUM        Número de servicio
+          w_poservices-short_text = <fs_auxoc>-ktext1.        "SH_TEXT1     Texto breve
+          w_poservices-quantity   = <fs_auxoc>-quantity_serv. "MENGEV       Cantidad
+          w_poservices-base_uom   = <fs_auxoc>-base_uom.      "MEINS        Unidad de medida base
+          w_poservices-gr_price   = <fs_auxoc>-gr_price.      "BAPIGRPRICE  Precio bruto
+
+          APPEND w_poservices TO t_poservices.
+
 
 *&---------------------------------------------------------------------*
 *&      BAPI EXTENSION_IN
 *&---------------------------------------------------------------------*
-        REFRESH: lt_extension.
+          REFRESH: lt_extension.
 
-        "EXTENSION FOR EKKO
-        bapi_te_mepoheader-po_number                  = ''.
-        bapi_te_mepoheader-zz1_agrupadordocumento_pdh = ls_auxoc-zz1_agrupadordocumento_pdh.
-        bapi_te_mepoheader-zz1_piloto_pdh             = ls_auxoc-zz1_piloto_pdh.
-        bapi_te_mepoheader-zz1_fechapicking1_pdh      = ls_auxoc-zz1_fechapicking1_pdh.
-        bapi_te_mepoheader-zz1_placast_pdh            = ls_auxoc-zz1_placast_pdh.
-        bapi_te_mepoheader-zz1_motivostraslados_pdh   = ls_auxoc-zz1_motivostraslados_pdh.
-        bapi_te_mepoheader-zz1_departamento1_pdh      = ls_auxoc-zz1_departamento1_pdh.
+          "EXTENSION FOR EKKO
+          bapi_te_mepoheader-po_number                  = ''.
+          bapi_te_mepoheaderx-po_number                  = ''.
 
-        ls_extension-structure = 'BAPI_TE_MEPOHEADER'.
+          IF <fs_auxoc>-zz1_agrupadordocumento_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_agrupadordocumento_pdh = <fs_auxoc>-zz1_agrupadordocumento_pdh.
+            bapi_te_mepoheaderx-zz1_agrupadordocumento_pdh = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_piloto_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_piloto_pdh             = <fs_auxoc>-zz1_piloto_pdh.
+            bapi_te_mepoheaderx-zz1_piloto_pdh             = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_piloto_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_piloto_pdh             = <fs_auxoc>-zz1_piloto_pdh.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_fechapicking1_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_fechapicking1_pdh      = <fs_auxoc>-zz1_fechapicking1_pdh.
+            bapi_te_mepoheaderx-zz1_fechapicking1_pdh      = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_placast_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_placast_pdh            = <fs_auxoc>-zz1_placast_pdh.
+            bapi_te_mepoheaderx-zz1_placast_pdh            = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_motivostraslados_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_motivostraslados_pdh   = <fs_auxoc>-zz1_motivostraslados_pdh.
+            bapi_te_mepoheaderx-zz1_motivostraslados_pdh   = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_departamento1_pdh IS NOT INITIAL.
+            bapi_te_mepoheader-zz1_departamento1_pdh      = <fs_auxoc>-zz1_departamento1_pdh.
+            bapi_te_mepoheaderx-zz1_departamento1_pdh      = 'X'.
+          ENDIF.
+
+          ls_extension-structure = 'BAPI_TE_MEPOHEADER'.
 *        ls_extension-valuepart1 = bapi_te_mepoheader.
 
-        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
-          EXPORTING
-            iv_move_from = bapi_te_mepoheader
-          CHANGING
-            cv_move_to   = ls_extension-valuepart1.
+          CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+            EXPORTING
+              iv_move_from = bapi_te_mepoheader
+            CHANGING
+              cv_move_to   = ls_extension-valuepart1.
 
-        APPEND ls_extension TO lt_extension.
-        CLEAR: ls_extension.
+          APPEND ls_extension TO lt_extension.
+          CLEAR: ls_extension.
 
-        bapi_te_mepoheaderx-po_number                  = ''.
-        bapi_te_mepoheaderx-zz1_agrupadordocumento_pdh = 'X'.
-        bapi_te_mepoheaderx-zz1_piloto_pdh             = 'X'.
-        bapi_te_mepoheaderx-zz1_fechapicking1_pdh      = 'X'.
-        bapi_te_mepoheaderx-zz1_placast_pdh            = 'X'.
-        bapi_te_mepoheaderx-zz1_motivostraslados_pdh   = 'X'.
-        bapi_te_mepoheaderx-zz1_departamento1_pdh      = 'X'.
-
-        ls_extension-structure = 'BAPI_TE_MEPOHEADERX'.
+          ls_extension-structure = 'BAPI_TE_MEPOHEADERX'.
 *        ls_extension-valuepart1 = bapi_te_mepoheaderx.
 
-        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
-          EXPORTING
-            iv_move_from = bapi_te_mepoheaderx
-          CHANGING
-            cv_move_to   = ls_extension-valuepart1.
+          CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+            EXPORTING
+              iv_move_from = bapi_te_mepoheaderx
+            CHANGING
+              cv_move_to   = ls_extension-valuepart1.
 
-        APPEND ls_extension TO lt_extension.
-        CLEAR: ls_extension.
+          APPEND ls_extension TO lt_extension.
+          CLEAR: ls_extension.
 
+          "EXTENSION FOR EKPO
+          bapi_te_mepoitem-po_item  = |{ <fs_auxoc>-po_item ALPHA = IN }|.
+          bapi_te_mepoitemx-po_item = |{ <fs_auxoc>-po_item ALPHA = IN }|.
 
-        "EXTENSION FOR EKPO
-        bapi_te_mepoitem-po_item                 = |{ ls_auxoc-po_item ALPHA = IN }|.
-        bapi_te_mepoitem-zz1_sistema_pdi         = ls_auxoc-zz1_sistema_pdi.
-        bapi_te_mepoitem-zz1_tipodeservicio1_pdi = ls_auxoc-zz1_tipodeservicio1_pdi.
-        bapi_te_mepoitem-zz1_fuerzadeventa_pdi   = ls_auxoc-zz1_fuerzadeventa_pdi.
-        bapi_te_mepoitem-zz1_placa1_pdi          = ls_auxoc-zz1_placa1_pdi.
-        bapi_te_mepoitem-zz1_ordendetrabajo1_pdi = ls_auxoc-zz1_ordendetrabajo1_pdi.
-        bapi_te_mepoitem-zz1_tipodefecha_pdi     = ls_auxoc-zz1_tipodefecha_pdi.
-        bapi_te_mepoitem-zz1_kilometraje1_pdi    = ls_auxoc-zz1_kilometraje1_pdi.
+          IF <fs_auxoc>-zz1_sistema_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_sistema_pdi  = <fs_auxoc>-zz1_sistema_pdi.
+            bapi_te_mepoitemx-zz1_sistema_pdi = 'X'.
+          ENDIF.
 
-        ls_extension-structure = 'BAPI_TE_MEPOITEM'.
+          IF <fs_auxoc>-zz1_tipodeservicio1_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_tipodeservicio1_pdi  = <fs_auxoc>-zz1_tipodeservicio1_pdi.
+            bapi_te_mepoitemx-zz1_tipodeservicio1_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_fuerzadeventa_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_fuerzadeventa_pdi  = <fs_auxoc>-zz1_fuerzadeventa_pdi.
+            bapi_te_mepoitemx-zz1_fuerzadeventa_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_placa1_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_placa1_pdi  = <fs_auxoc>-zz1_placa1_pdi.
+            bapi_te_mepoitemx-zz1_placa1_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_ordendetrabajo1_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_ordendetrabajo1_pdi  = <fs_auxoc>-zz1_ordendetrabajo1_pdi.
+            bapi_te_mepoitemx-zz1_ordendetrabajo1_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_tipodefecha_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_tipodefecha_pdi  = <fs_auxoc>-zz1_tipodefecha_pdi.
+            bapi_te_mepoitemx-zz1_tipodefecha_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_kilometraje1_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_kilometraje1_pdi  = <fs_auxoc>-zz1_kilometraje1_pdi.
+            bapi_te_mepoitemx-zz1_kilometraje1_pdi = 'X'.
+          ENDIF.
+
+          IF <fs_auxoc>-zz1_canal1_pdi IS NOT INITIAL.
+            bapi_te_mepoitem-zz1_canal1_pdi  = <fs_auxoc>-zz1_canal1_pdi.
+            bapi_te_mepoitemx-zz1_canal1_pdi = 'X'.
+          ENDIF.
+
+          ls_extension-structure = 'BAPI_TE_MEPOITEM'.
 *        ls_extension-valuepart1 = bapi_te_mepoitem.
 
-        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
-          EXPORTING
-            iv_move_from = bapi_te_mepoitem
-          CHANGING
-            cv_move_to   = ls_extension-valuepart1.
+          CALL FUNCTION 'PI_BP_MOVE_UNICODE'
+            EXPORTING
+              iv_move_from = bapi_te_mepoitem
+            CHANGING
+              cv_move_to   = ls_extension-valuepart1.
 
-        APPEND ls_extension TO lt_extension.
-        CLEAR: ls_extension.
+          APPEND ls_extension TO lt_extension.
+          CLEAR: ls_extension.
 
-        bapi_te_mepoitemx-po_item                 = |{ ls_auxoc-po_item ALPHA = IN }|.
-        bapi_te_mepoitemx-zz1_sistema_pdi         = 'X'.
-        bapi_te_mepoitemx-zz1_tipodeservicio1_pdi = 'X'.
-        bapi_te_mepoitemx-zz1_fuerzadeventa_pdi   = 'X'.
-        bapi_te_mepoitemx-zz1_placa1_pdi          = 'X'.
-        bapi_te_mepoitemx-zz1_ordendetrabajo1_pdi = 'X'.
-        bapi_te_mepoitemx-zz1_tipodefecha_pdi     = 'X'.
-        bapi_te_mepoitemx-zz1_kilometraje1_pdi    = 'X'.
-
-        ls_extension-structure = 'BAPI_TE_MEPOITEMX'.
+          ls_extension-structure = 'BAPI_TE_MEPOITEMX'.
 *        ls_extension-valuepart1 = bapi_te_mepoitemx.
 
-        CALL FUNCTION 'PI_BP_MOVE_UNICODE'
-          EXPORTING
-            iv_move_from = bapi_te_mepoitemx
-          CHANGING
-            cv_move_to   = ls_extension-valuepart1.
-
-        APPEND ls_extension TO lt_extension.
-        CLEAR: ls_extension.
-
-
-*&---------------------------------------------------------------------*
-
-        CALL FUNCTION 'BAPI_PO_CREATE1'
-          EXPORTING
-            poheader         = t_poheader
-            poheaderx        = t_poheaderx
-            no_price_from_po = 'X'
-          TABLES
-            return           = t_return_log
-            extensionin      = lt_extension
-            poitem           = t_poitem
-            poitemx          = t_poitemx
-            poaccount        = t_poaccount
-            poaccountx       = t_poaccountx
-            poschedule       = t_poschedule
-            poschedulex      = t_poschedulex
-            poservices       = t_poservices.
-
-
-        READ TABLE t_return_log INTO w_return_log  WITH KEY type = 'S' id = '06' number = '017'.
-        IF sy-subrc EQ 0.
-
-          CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+          CALL FUNCTION 'PI_BP_MOVE_UNICODE'
             EXPORTING
-              wait   = 'X'
-            IMPORTING
-              return = t_return_log.
+              iv_move_from = bapi_te_mepoitemx
+            CHANGING
+              cv_move_to   = ls_extension-valuepart1.
 
-          ls_auxoc-orden_compra = w_return_log-message_v2.
-          MODIFY lt_data FROM ls_auxoc INDEX lv_tabix.
-
-          true_oc  = 'X'.
-
-          CLEAR: t_poheader, t_poheaderx.
-          REFRESH: t_return_log, t_poitem, t_poitemx, t_poschedule, t_poschedulex.
+          APPEND ls_extension TO lt_extension.
+          CLEAR: ls_extension.
 
         ELSE.
-
-          false_oc = 'X'.
-
-          APPEND LINES OF t_return_log TO t_return.
-
+          EXIT.
         ENDIF.
-
       ENDLOOP.
 
-      IF true_oc  EQ 'X' AND false_oc IS INITIAL.
-        MESSAGE 'Se han creado Ordenes de Compras.' TYPE 'S'.
-      ELSEIF false_oc  EQ 'X' AND true_oc IS INITIAL.
-        MESSAGE 'Han ocurriendo errores en la generacion de las Ordenes de Compras. Revisar Log de Errores' TYPE 'S' DISPLAY LIKE 'E'.
-      ELSEIF false_oc EQ 'X' AND true_oc EQ 'X'.
-        MESSAGE 'Algunos registros no pudieron generar Ordenes de Compras. Revisar Log de Errores' TYPE 'S' DISPLAY LIKE 'E'.
-      ENDIF.
-      CLEAR: true_oc, false_oc.
+*&---------------------------------------------------------------------*
+*&    EXCUTE BAPI PO
+*&---------------------------------------------------------------------*
+*      IF lv_count = 1.
 
+*        DATA: t_poshippingexp TYPE TABLE OF bapimeposhippexp.
+
+      CALL FUNCTION 'BAPI_PO_CREATE1'
+        EXPORTING
+          poheader         = t_poheader
+          poheaderx        = t_poheaderx
+          no_price_from_po = 'X'
+        TABLES
+          return           = t_return_log
+          extensionin      = lt_extension
+          poitem           = t_poitem
+          poitemx          = t_poitemx
+          poaccount        = t_poaccount
+          poaccountx       = t_poaccountx
+          poschedule       = t_poschedule
+          poschedulex      = t_poschedulex
+          poservices       = t_poservices.
+*            poshippingexp    = t_poshippingexp.
+
+
+      READ TABLE t_return_log INTO w_return_log  WITH KEY type = 'S' id = '06' number = '017'.
+      IF sy-subrc EQ 0.
+
+        CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+          EXPORTING
+            wait   = 'X'
+          IMPORTING
+            return = t_return_log.
+
+        LOOP AT lt_data ASSIGNING <fs_auxoc> WHERE exclude EQ 'X' AND orden_compra EQ ''.
+          <fs_auxoc>-orden_compra = w_return_log-message_v2.
+*          MODIFY lt_data FROM ls_auxoc INDEX lv_tabix.
+        ENDLOOP.
+
+        PERFORM wipeout_all.
+
+        true_oc  = 'X'.
+
+        CLEAR:
+               t_poheader,
+               t_poheaderx,
+               w_poitem,
+               w_poitemx,
+               w_poschedule,
+               w_poschedulex,
+               w_poaccount,
+               w_poaccountx,
+               w_poservices,
+               bapi_te_mepoheader,
+               bapi_te_mepoheaderx,
+               bapi_te_mepoitem,
+               bapi_te_mepoitemx,
+               ls_extension,
+               LV_POS.
+
+        REFRESH:
+                 t_poitem,
+                 t_poitemx,
+                 t_poschedule,
+                 t_poschedulex,
+                 t_poaccount,
+                 t_poaccountx,
+                 t_poservices,
+                 lt_extension.
+
+*        CLEAR: t_poheader, t_poheaderx, lv_pos.
+*        REFRESH: t_return_log, t_poitem, t_poitemx, t_poschedule, t_poschedulex.
+
+      ELSE.
+
+        false_oc = 'X'.
+
+        IF t_poheader IS INITIAL.
+
+        ELSE.
+          APPEND LINES OF t_return_log TO t_return.
+        ENDIF.
+
+        LOOP AT lt_data ASSIGNING <fs_auxoc> WHERE exclude EQ 'X' AND orden_compra EQ ''.
+          CLEAR: <fs_auxoc>-exclude.
+        ENDLOOP.
+
+      CLEAR:
+             t_poheader,
+             t_poheaderx,
+             w_poitem,
+             w_poitemx,
+             w_poschedule,
+             w_poschedulex,
+             w_poaccount,
+             w_poaccountx,
+             w_poservices,
+             bapi_te_mepoheader,
+             bapi_te_mepoheaderx,
+             bapi_te_mepoitem,
+             bapi_te_mepoitemx,
+             ls_extension,
+             LV_POS.
+
+      REFRESH:
+               t_poitem,
+               t_poitemx,
+               t_poschedule,
+               t_poschedulex,
+               t_poaccount,
+               t_poaccountx,
+               t_poservices,
+               lt_extension.
+
+
+
+      ENDIF.
+
+
+
+*      CLEAR: t_poheader, t_poheaderx, w_return_log.
+*
+*      REFRESH: t_return_log, lt_extension,
+*               t_poitemx, t_poitem,
+*               t_poaccount, t_poaccountx,
+*               t_poschedule, t_poschedulex,
+*               t_poservices.
+
+*      ENDIF.
+
+    ENDLOOP.
+
+    LOOP AT lt_data ASSIGNING <fs_auxoc> WHERE exclude EQ 'X' AND orden_compra NE ''.
+      CLEAR: <fs_auxoc>-exclude.
+    ENDLOOP.
+
+
+*    IF lv_count > 1.
+
+*      CALL FUNCTION 'BAPI_PO_CREATE1'
+*        EXPORTING
+*          poheader         = t_poheader
+*          poheaderx        = t_poheaderx
+*          no_price_from_po = 'X'
+*        TABLES
+*          return           = t_return_log
+*          extensionin      = lt_extension
+*          poitem           = t_poitem
+*          poitemx          = t_poitemx
+*          poaccount        = t_poaccount
+*          poaccountx       = t_poaccountx
+*          poschedule       = t_poschedule
+*          poschedulex      = t_poschedulex
+*          poservices       = t_poservices.
+*
+*
+*      READ TABLE t_return_log INTO w_return_log  WITH KEY type = 'S' id = '06' number = '017'.
+*      IF sy-subrc EQ 0.
+*
+*        CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+*          EXPORTING
+*            wait   = 'X'
+*          IMPORTING
+*            return = t_return_log.
+
+*        LOOP AT lt_data ASSIGNING FIELD-SYMBOL(<fs_auxoc>) WHERE check EQ 'X'.
+*          <fs_auxoc>-orden_compra = w_return_log-message_v2.
+
+
+**          Insercion de Datos Para Objeto PA.
+***          Obtener Imputación doc. compras
+*          SELECT SINGLE * FROM ekkn INTO @DATA(ls_ekkn) WHERE ebeln EQ @<fs_auxoc>-orden_compra.
+*          IF sy-subrc EQ 0.
+*
+***          Obtener CeBE
+*            SELECT SINGLE * FROM marc INTO @DATA(ls_marc) WHERE matnr EQ @<fs_auxoc>-material
+*                                                            AND werks EQ @<fs_auxoc>-plant.
+*
+***          Obtener Ultimo Rango Generado Objeto PA
+*            SELECT * FROM ce4ar01_acct ORDER BY paobjnr INTO TABLE @DATA(lt_ce4ar01) UP TO 5 ROWS.
+*              IF sy-subrc eQ 0.
+*
+*                READ TABLE lt_ce4ar01 INTO DATA(ls_ce4ar01) INDEX 1.
+*                IF sy-subrc EQ 0.
+*                  DATA(lv_objetopa) = ls_ce4ar01-PAOBJNR + 1.
+*                ENDIF.
+*
+*              ENDIF.
+*
+*            DATA: ls_ce4ar01 type ce4ar01_acct.
+*
+*
+*          ENDIF.
+
+****          Obtener Segmento
+**          SELECT SINGLE * FROM cepc INTO @DATA(ls_cepc) WHERE prctr EQ @ls_marc-prctr
+**                                                          AND KOKRS EQ @ls_ekkn-KOKRS.
+
+*        ENDLOOP.
+
+*        true_oc  = 'X'.
+*        CLEAR: t_poheader, t_poheaderx.
+*        REFRESH: t_return_log, t_poitem, t_poitemx, t_poschedule, t_poschedulex.
+
+*      ELSE.
+
+*        false_oc = 'X'.
+*        APPEND LINES OF t_return_log TO t_return.
+*
+*        CLEAR: t_poheader, t_poheaderx, w_return_log.
+*
+*        REFRESH: t_return_log, lt_extension,
+*                 t_poitemx, t_poitem,
+*                 t_poaccount, t_poaccountx,
+*                 t_poschedule, t_poschedulex,
+*                 t_poservices.
+
+*      ENDIF.
+*    ENDIF.
+
+
+    IF true_oc  EQ 'X' AND false_oc IS INITIAL.
+      MESSAGE 'Se han creado Ordenes de Compras' TYPE 'S'.
+    ELSEIF false_oc  EQ 'X' AND true_oc IS INITIAL.
+      MESSAGE 'Han ocurriendo errores en la generacion de las Ordenes de Compras. Revisar Log de Errores' TYPE 'S' DISPLAY LIKE 'E'.
+    ELSEIF false_oc EQ 'X' AND true_oc EQ 'X'.
+      MESSAGE 'Algunos registros no pudieron generar Ordenes de Compras. Revisar Log de Errores' TYPE 'S' DISPLAY LIKE 'E'.
     ENDIF.
+    CLEAR: true_oc, false_oc.
 
   ENDIF.
 
@@ -1175,6 +1506,18 @@ FORM user_command USING p_ucomm TYPE sy-ucomm
       p_selfield-refresh    = c_x.
       p_selfield-col_stable = c_x.
       p_selfield-row_stable = c_x.
+    WHEN '&SEL_ALL'.
+      LOOP AT lt_data ASSIGNING <fs_data>.
+        <fs_data>-check = 'X'.
+        MODIFY lt_data FROM <fs_data>.
+      ENDLOOP.
+      p_selfield-refresh    = c_x.
+    WHEN '&DES_ALL'.
+      LOOP AT lt_data ASSIGNING <fs_data>.
+        <fs_data>-check = ''.
+        MODIFY lt_data FROM <fs_data>.
+      ENDLOOP.
+      p_selfield-refresh    = c_x.
   ENDCASE.
 ENDFORM.
 
@@ -1205,5 +1548,42 @@ FORM show_log.
   CALL METHOD /scmtms/cl_batch_helper_80=>show_application_log_in_popup
     EXPORTING
       it_bal_msg = lt_bal_msg.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form wipeout_all
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM wipeout_all .
+
+*  CLEAR:
+*         t_poheader,
+*         t_poheaderx,
+*         w_poitem,
+*         w_poitemx,
+*         w_poschedule,
+*         w_poschedulex,
+*         w_poaccount,
+*         w_poaccountx,
+*         w_poservices,
+*         bapi_te_mepoheader,
+*         bapi_te_mepoheaderx,
+*         bapi_te_mepoitem,
+*         bapi_te_mepoitemx,
+*         ls_extension.
+*
+*  REFRESH:
+*          t_poitem,
+*          t_poitemx,
+*          t_poschedule,
+*          t_poschedulex,
+*          t_poaccount,
+*          t_poaccountx,
+*          t_poservices,
+*          lt_extension.
 
 ENDFORM.
